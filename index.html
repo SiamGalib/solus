@@ -421,11 +421,102 @@
     align-items:center;
     justify-content:center;
   }
-  .nav-toggle{
-    display:none;
-    background:none;
-    color:#fff;
+  .wishlist-btn-wrap{position:relative;}
+  .wishlist-btn-wrap > button{position:relative;}
+  .wishlist-count{
+    position:absolute;
+    top:0;right:0;
+    background:var(--purple);
+    color:#000;
+    font-size:10px;
+    font-weight:700;
+    width:16px;height:16px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
+  .wishlist-dropdown{
+    position:absolute;
+    top:calc(100% + 16px);
+    right:0;
+    width:340px;
+    max-height:460px;
+    overflow:hidden;
+    background:#fff;
+    color:var(--ink);
+    border-radius:14px;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);
+    display:none;
+    flex-direction:column;
+    z-index:200;
+  }
+  .wishlist-dropdown.show{display:flex;}
+  .wishlist-items-scroll{
+    overflow-y:auto;
+    max-height:460px;
+  }
+  .wishlist-dropdown-item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--line-dark);
+  }
+  .wishlist-dropdown-item:last-child{border-bottom:none;}
+  .wishlist-dropdown-item img{
+    width:54px;height:54px;
+    object-fit:contain;
+    background:#f2f2f4;
+    border-radius:8px;
+    flex-shrink:0;
+  }
+  .wishlist-dropdown-item .wdi-name{
+    font-size:12.5px;
+    font-weight:600;
+    line-height:1.35;
+    display:block;
+    margin-bottom:6px;
+  }
+  .wishlist-dropdown-item .wdi-price{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--purple-dark);
+  }
+  .wdi-details{flex:1;min-width:0;}
+  .wdi-remove{
+    background:#e0e0e5;
+    border:1.5px solid #bbb;
+    width:26px;height:26px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#000 !important;
+    flex-shrink:0;
+    cursor:pointer;
+  }
+  .wdi-remove:hover{background:#ffd5d5;border-color:#c00;}
+  .wdi-remove svg{width:13px;height:13px;}
+
+  /* ---------- WISHLIST HEART ON PRODUCT CARD ---------- */
+  .wishlist-heart-btn{
+    position:absolute;
+    top:12px; right:12px;
+    width:34px;height:34px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.9);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:5;
+    color:#333;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .wishlist-heart-btn:hover{transform:scale(1.08);}
+  .wishlist-heart-btn svg{width:17px;height:17px;stroke-width:2;fill:none;stroke:currentColor;}
+  .wishlist-heart-btn.saved{color:#e0457b;}
+  .wishlist-heart-btn.saved svg{fill:#e0457b;}
 
   /* ---------- CART DROPDOWN ---------- */
   .cart-btn-wrap{position:relative;}
@@ -829,6 +920,7 @@
     transform:translateY(-4px);
   }
   .product-shot{
+    position:relative;
     background:#f2f2f4;
     height:420px;
     display:flex;
@@ -1850,23 +1942,13 @@
       position:absolute;
       top:100%; left:0; right:0;
       background:var(--black);
-      flex-direction:column;
-      align-items:flex-start;
-      padding:8px 28px 24px;
-      gap:14px;
+      padding:12px 20px;
+      gap:20px;
       border-top:1px solid var(--line);
-      opacity:0;
-      visibility:hidden;
-      transform:translateY(-12px);
-      transition:opacity .28s ease, transform .28s ease, visibility .28s;
-    }
-    .nav-links.open{
-      opacity:1;
-      visibility:visible;
-      transform:translateY(0);
+      overflow-x:auto;
+      white-space:nowrap;
     }
     .nav-links a{padding-bottom:4px;}
-    .nav-toggle{display:flex; align-items:center; justify-content:center;}
     .hero h1{font-size:38px;}
     .features-grid{grid-template-columns:1fr 1fr;}
     .product-grid{grid-template-columns:1fr;}
@@ -2165,9 +2247,15 @@
   <div class="cart-empty" id="cartEmpty">Your cart is empty.</div>
 </div>
 </div>
-      <button class="nav-toggle" id="navToggle" aria-label="Menu">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
+      <div class="wishlist-btn-wrap">
+        <button aria-label="Watch Later" id="wishlistBtn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+          <span class="wishlist-count" id="wishlistCount">0</span>
+        </button>
+        <div class="wishlist-dropdown" id="wishlistDropdown">
+          <div class="cart-empty" id="wishlistEmpty">You haven't saved anything for later yet.</div>
+        </div>
+      </div>
       
     </div>
   </nav>
@@ -2688,14 +2776,6 @@ navItems.forEach(item => {
   });
 });
 
-document.addEventListener('click',(e)=>{
-  if(
-    !navLinks.contains(e.target) &&
-    !navToggle.contains(e.target)
-  ){
-    navLinks.classList.remove('open');
-  }
-});
   // ---- Falling gift boxes with discount coupon ----
   (function(){
     const container = document.getElementById('giftBoxContainer');
@@ -2968,7 +3048,12 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     const badgesHtml = p.badges.map(b => `<span class="product-badge">${b}</span>`).join('');
 
     card.innerHTML = `
-      <div class="product-shot"><img src="${p.image}" alt="${p.title}"></div>
+      <div class="product-shot">
+        <img src="${p.image}" alt="${p.title}">
+        <button class="wishlist-heart-btn" data-idx="${idx}" aria-label="Save for later" title="Save for later">
+          <svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        </button>
+      </div>
       <div class="product-info">
         <h3>${p.title}</h3>
         ${badgesHtml ? `<div class="badge-row">${badgesHtml}</div>` : ''}
@@ -2987,6 +3072,12 @@ document.querySelectorAll('.social-btn').forEach(btn => {
   });
 
   grid.addEventListener('click', (e)=>{
+    const heartBtn = e.target.closest('.wishlist-heart-btn');
+    if(heartBtn){
+      const idx = heartBtn.dataset.idx;
+      toggleWishlist(idx);
+      return;
+    }
     const btn = e.target.closest('.add-cart');
     if(!btn) return;
     const idx = btn.dataset.idx;
@@ -3002,6 +3093,71 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     btn.innerHTML = 'ADDED ✓';
     btn.style.background = '#3a8c5c';
     setTimeout(()=>{ btn.innerHTML = original; btn.style.background = ''; }, 1100);
+  });
+
+  // ---- Wishlist / Watch Later ----
+  let wishlistItems = [];
+  const wishlistBtn = document.getElementById('wishlistBtn');
+  const wishlistDropdown = document.getElementById('wishlistDropdown');
+  const wishlistCountEl = document.getElementById('wishlistCount');
+
+  function toggleWishlist(idx){
+    const p = products[idx];
+    const existingPos = wishlistItems.findIndex(i => i.image === p.image);
+    if(existingPos > -1){
+      wishlistItems.splice(existingPos, 1);
+    } else {
+      wishlistItems.push({ idx, name: p.title, price: p.price, image: p.image });
+    }
+    renderWishlist();
+    grid.querySelectorAll(`.wishlist-heart-btn[data-idx="${idx}"]`).forEach(b=>{
+      b.classList.toggle('saved', existingPos === -1);
+    });
+  }
+
+  function renderWishlist(){
+    wishlistCountEl.textContent = wishlistItems.length;
+    if(wishlistItems.length === 0){
+      wishlistDropdown.innerHTML = '<div class="cart-empty" id="wishlistEmpty">You haven\'t saved anything for later yet.</div>';
+      return;
+    }
+    const itemsHtml = wishlistItems.map((item, i) => `
+      <div class="wishlist-dropdown-item">
+        <img src="${item.image}" alt="${item.name}">
+        <div class="wdi-details">
+          <span class="wdi-name">${item.name}</span>
+          <span class="wdi-price">$${item.price.toFixed(2)}</span>
+        </div>
+        <button class="wdi-remove" data-i="${i}" title="Remove">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    `).join('');
+    wishlistDropdown.innerHTML = `<div class="wishlist-items-scroll">${itemsHtml}</div>`;
+
+    wishlistDropdown.querySelectorAll('.wdi-remove').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const i = parseInt(btn.dataset.i);
+        const removed = wishlistItems.splice(i, 1)[0];
+        renderWishlist();
+        if(removed){
+          grid.querySelectorAll(`.wishlist-heart-btn[data-idx="${removed.idx}"]`).forEach(b=>{
+            b.classList.remove('saved');
+          });
+        }
+      });
+    });
+  }
+
+  wishlistBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    wishlistDropdown.classList.toggle('show');
+  });
+  document.addEventListener('click', (e)=>{
+    if(!wishlistDropdown.contains(e.target) && !wishlistBtn.contains(e.target)){
+      wishlistDropdown.classList.remove('show');
+    }
   });
 
   // ---- Cart dropdown: shows which products were added ----
@@ -3583,11 +3739,6 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     if(e.target === campaignModal) campaignModal.classList.remove('show');
   });
 
-  // ---- Mobile nav toggle ----
-  document.getElementById('navToggle').addEventListener('click', ()=>{
-    document.getElementById('navLinks').classList.toggle('open');
-  });
-
   // ---- Newsletter form ----
   // Paste the Web App URL you get after deploying the Google Apps Script (see instructions).
   const SHEET_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwwlh0POdk56okr_8UBRm-yttVMKi71tlk08Du61DlSS6XQgzKSM_langle859zdga0/exec';
@@ -3870,7 +4021,7 @@ searchClose.addEventListener('click', () => {
   });
   document.getElementById('viewWishlistFromAccountBtn').addEventListener('click', () => {
     accountModal.classList.remove('show');
-    alert('Wishlist view is coming soon!');
+    document.getElementById('wishlistDropdown').classList.add('show');
   });
 </script>
 
