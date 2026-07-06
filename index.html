@@ -3116,6 +3116,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
   }
 
   function renderWishlist(){
+    persistUserData();
     wishlistCountEl.textContent = wishlistItems.length;
     if(wishlistItems.length === 0){
       wishlistDropdown.innerHTML = '<div class="cart-empty" id="wishlistEmpty">You haven\'t saved anything for later yet.</div>';
@@ -3171,6 +3172,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
   }
 
   function renderCart(){
+    persistUserData();
     cartCountEl.textContent = cartItems.reduce((s,i)=>s+i.qty, 0);
     if(cartItems.length === 0){
       cartDropdown.innerHTML = '<div class="cart-empty" id="cartEmpty">Your cart is empty.</div>';
@@ -3814,6 +3816,7 @@ searchClose.addEventListener('click', () => {
 <!-- Paste your Firebase project's config below (Firebase Console > Project Settings > Your apps > SDK setup) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyCXdaJNIEuG80ZSPk9OiLmpNNvHP5QGTLI",
@@ -3826,6 +3829,94 @@ searchClose.addEventListener('click', () => {
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ---------- PER-ACCOUNT CART / WISHLIST PERSISTENCE ----------
+  // Logged-in users: cart + wishlist are stored in Firestore under users/{uid}
+  // Guests (not logged in): cart + wishlist are stored in localStorage on this device only
+  const GUEST_DATA_KEY = 'solus-guest-cart-data';
+  let currentUserId = null;
+  let dataReadyForSaving = false; // guards against overwriting cloud data before the initial load finishes
+
+  function getGuestData(){
+    try{
+      const raw = localStorage.getItem(GUEST_DATA_KEY);
+      return raw ? JSON.parse(raw) : { cart: [], wishlist: [] };
+    }catch(e){ return { cart: [], wishlist: [] }; }
+  }
+
+  function saveGuestData(){
+    try{
+      localStorage.setItem(GUEST_DATA_KEY, JSON.stringify({ cart: cartItems, wishlist: wishlistItems }));
+    }catch(e){}
+  }
+
+  // Called by renderCart()/renderWishlist() any time the cart or wishlist changes
+  function persistUserData(){
+    if(!dataReadyForSaving) return;
+    if(currentUserId){
+      db.collection('users').doc(currentUserId).set({
+        cart: cartItems,
+        wishlist: wishlistItems,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(err => console.error('Could not save your cart/wishlist:', err));
+    } else {
+      saveGuestData();
+    }
+  }
+
+  function applyLoadedData(data){
+    cartItems.length = 0;
+    (data.cart || []).forEach(i => cartItems.push(i));
+    wishlistItems.length = 0;
+    (data.wishlist || []).forEach(i => wishlistItems.push(i));
+    renderCart();
+    renderWishlist();
+    document.querySelectorAll('.wishlist-heart-btn').forEach(b=>{
+      const idx = b.dataset.idx;
+      const isSaved = wishlistItems.some(i => String(i.idx) === String(idx));
+      b.classList.toggle('saved', isSaved);
+    });
+  }
+
+  function mergeItemLists(base, extra, addQty){
+    const merged = base.map(i => ({...i}));
+    extra.forEach(item=>{
+      const existing = merged.find(i => i.image === item.image);
+      if(existing){
+        if(addQty) existing.qty = (existing.qty||1) + (item.qty||1);
+      } else {
+        merged.push({...item});
+      }
+    });
+    return merged;
+  }
+
+  // On login: fetch the account's saved cart/wishlist from Firestore, merge in
+  // anything the person added as a guest on this device, then keep it all in sync.
+  function loadDataForUser(uid){
+    dataReadyForSaving = false;
+    const guestData = getGuestData();
+    db.collection('users').doc(uid).get().then(doc => {
+      const cloudData = doc.exists ? doc.data() : { cart: [], wishlist: [] };
+      const mergedCart = mergeItemLists(cloudData.cart || [], guestData.cart || [], true);
+      const mergedWishlist = mergeItemLists(cloudData.wishlist || [], guestData.wishlist || [], false);
+      applyLoadedData({ cart: mergedCart, wishlist: mergedWishlist });
+      localStorage.removeItem(GUEST_DATA_KEY);
+      dataReadyForSaving = true;
+      persistUserData();
+    }).catch(err => {
+      console.error('Could not load your saved cart/wishlist:', err);
+      applyLoadedData(guestData);
+      dataReadyForSaving = true;
+    });
+  }
+
+  function loadDataForGuest(){
+    dataReadyForSaving = false;
+    applyLoadedData(getGuestData());
+    dataReadyForSaving = true;
+  }
 
   const authEmail = document.getElementById('authEmail');
   const authPassword = document.getElementById('authPassword');
@@ -4003,10 +4094,19 @@ searchClose.addEventListener('click', () => {
       } else {
         profileAvatar.textContent = displayName.charAt(0).toUpperCase();
       }
+
+      // Load this account's cart/wishlist from Firestore (merging in anything
+      // added as a guest on this device) so it's the same on every device.
+      currentUserId = user.uid;
+      loadDataForUser(user.uid);
     } else {
       authFormView.style.display = 'block';
       createAccountView.style.display = 'none';
       loggedInView.style.display = 'none';
+
+      // Signed out: fall back to this device's local (guest) cart/wishlist.
+      currentUserId = null;
+      loadDataForGuest();
     }
   });
 
