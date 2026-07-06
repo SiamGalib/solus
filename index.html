@@ -2152,6 +2152,88 @@
   cursor:pointer;
 }
 
+/* ---------- CONNECTED ACCOUNTS ---------- */
+.linked-accounts-section{
+  text-align:left;
+  margin:4px 0 20px;
+  padding-top:16px;
+  border-top:1px solid #eee;
+}
+.linked-accounts-title{
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  color:#888;
+  margin-bottom:12px;
+}
+.linked-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid #f0f0f0;
+  gap:10px;
+}
+.linked-row:last-child{border-bottom:none;}
+.linked-row-info{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.linked-name{
+  font-size:14px;
+  font-weight:700;
+  color:#111;
+}
+.linked-status{
+  font-size:12px;
+  color:#999;
+}
+.linked-status.is-connected{color:#3a8c5c;}
+.linked-row-actions{
+  display:flex;
+  gap:6px;
+  flex-shrink:0;
+}
+.linked-action-btn{
+  padding:7px 12px;
+  border-radius:6px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.5px;
+  border:1px solid #ddd;
+  background:#fff;
+  color:#111;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.linked-action-btn.linked-connect{
+  background:#111;
+  color:#fff;
+  border-color:#111;
+}
+.linked-action-btn.linked-disconnect{
+  color:#c0392b;
+  border-color:#f2cfc9;
+}
+.linked-action-btn:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+}
+#passwordLinkForm{
+  padding-top:6px;
+}
+#passwordLinkForm input{
+  width:100%;
+  padding:11px;
+  margin-bottom:10px;
+  border:1px solid #ddd;
+  border-radius:6px;
+}
+#passwordLinkForm .account-login-btn{
+  margin-bottom:8px;
+}
+
 
 
 .search-overlay{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(420px,90%);display:none;z-index:10000}
@@ -2508,6 +2590,23 @@
       <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
         <button class="account-login-btn" id="viewOrdersBtn" style="background:var(--panel); color:var(--ink); border:1px solid var(--line);">MY ORDERS</button>
         <button class="account-login-btn" id="viewWishlistFromAccountBtn" style="background:var(--panel); color:var(--ink); border:1px solid var(--line);">MY WISHLIST</button>
+      </div>
+
+      <!-- ---------- CONNECTED ACCOUNTS ---------- -->
+      <div class="linked-accounts-section">
+        <p class="linked-accounts-title">CONNECTED ACCOUNTS</p>
+        <div id="linkedAccountsList"></div>
+        <div id="linkedAccountsError" style="color:#c0392b;font-size:12px;margin-top:6px;min-height:14px;"></div>
+
+        <!-- Shown when connecting a new email/password, or changing the existing password -->
+        <div id="passwordLinkForm" style="display:none;">
+          <input type="email" id="linkEmail" placeholder="Email Address">
+          <input type="password" id="linkPassword" placeholder="Password">
+          <input type="password" id="linkPasswordConfirm" placeholder="Confirm Password">
+          <div id="passwordLinkError" style="color:#c0392b;font-size:12px;margin:-4px 0 10px;min-height:14px;"></div>
+          <button class="account-login-btn" id="passwordLinkSubmitBtn">SAVE</button>
+          <button class="account-login-btn" id="passwordLinkCancelBtn" style="background:#eee; color:#111;">CANCEL</button>
+        </div>
       </div>
 
       <div class="divider">OR</div>
@@ -4099,14 +4198,244 @@ searchClose.addEventListener('click', () => {
       // added as a guest on this device) so it's the same on every device.
       currentUserId = user.uid;
       loadDataForUser(user.uid);
+
+      // Show which sign-in methods are connected to this account.
+      passwordLinkForm.style.display = 'none';
+      renderLinkedAccounts(user);
     } else {
       authFormView.style.display = 'block';
       createAccountView.style.display = 'none';
       loggedInView.style.display = 'none';
+      passwordLinkForm.style.display = 'none';
 
       // Signed out: fall back to this device's local (guest) cart/wishlist.
       currentUserId = null;
       loadDataForGuest();
+    }
+  });
+
+  // ---------- CONNECTED ACCOUNTS (link / unlink / change sign-in methods) ----------
+  const PROVIDERS_META = {
+    'google.com': { name: 'Google', providerFactory: () => new firebase.auth.GoogleAuthProvider() },
+    'twitter.com': { name: 'X', providerFactory: () => new firebase.auth.TwitterAuthProvider() },
+    'password': { name: 'Email & Password' }
+  };
+
+  const linkedAccountsList = document.getElementById('linkedAccountsList');
+  const linkedAccountsError = document.getElementById('linkedAccountsError');
+  const passwordLinkForm = document.getElementById('passwordLinkForm');
+  const linkEmail = document.getElementById('linkEmail');
+  const linkPassword = document.getElementById('linkPassword');
+  const linkPasswordConfirm = document.getElementById('linkPasswordConfirm');
+  const passwordLinkError = document.getElementById('passwordLinkError');
+  const passwordLinkSubmitBtn = document.getElementById('passwordLinkSubmitBtn');
+  const passwordLinkCancelBtn = document.getElementById('passwordLinkCancelBtn');
+  let passwordFormIsChange = false;
+
+  function friendlyLinkError(err){
+    // Turn Firebase's linking/unlinking error codes into plain English.
+    const map = {
+      'auth/credential-already-in-use': 'That account is already connected to a different user.',
+      'auth/email-already-in-use': 'That email is already connected to a different user.',
+      'auth/provider-already-linked': 'That sign-in method is already connected.',
+      'auth/no-such-provider': "That sign-in method isn't connected to this account.",
+      'auth/requires-recent-login': 'Please confirm your identity again, then retry.',
+      'auth/popup-closed-by-user': 'Sign-in was cancelled.',
+      'auth/cancelled-popup-request': 'Sign-in was cancelled.',
+      'auth/popup-blocked': 'Your browser blocked the popup. Please allow popups and try again.',
+      'auth/weak-password': 'Password should be at least 6 characters.',
+      'auth/invalid-email': 'Please enter a valid email address.'
+    };
+    return map[err.code] || err.message;
+  }
+
+  // Some sensitive actions (unlink, updatePassword) need a "recent" login.
+  // If Firebase complains, silently re-authenticate using whichever connected
+  // provider is available, then retry the original action once.
+  function reauthenticate(){
+    const user = auth.currentUser;
+    const linkedIds = user.providerData.map(p => p.providerId);
+    if(linkedIds.includes('google.com')){
+      return user.reauthenticateWithPopup(new firebase.auth.GoogleAuthProvider());
+    }
+    if(linkedIds.includes('twitter.com')){
+      return user.reauthenticateWithPopup(new firebase.auth.TwitterAuthProvider());
+    }
+    if(linkedIds.includes('password')){
+      const pwd = prompt('Please re-enter your current password to confirm this change:');
+      if(!pwd) return Promise.reject({ code:'auth/popup-closed-by-user', message:'Cancelled' });
+      const cred = firebase.auth.EmailAuthProvider.credential(user.email, pwd);
+      return user.reauthenticateWithCredential(cred);
+    }
+    return Promise.reject({ code:'auth/requires-recent-login', message:'Please log out and back in, then try again.' });
+  }
+
+  function withReauthRetry(action){
+    return action().catch(err => {
+      if(err.code === 'auth/requires-recent-login'){
+        return reauthenticate().then(action);
+      }
+      throw err;
+    });
+  }
+
+  function renderLinkedAccounts(user){
+    linkedAccountsError.textContent = '';
+    const linkedIds = user.providerData.map(p => p.providerId);
+    linkedAccountsList.innerHTML = '';
+
+    Object.keys(PROVIDERS_META).forEach(id => {
+      const meta = PROVIDERS_META[id];
+      const isLinked = linkedIds.includes(id);
+      const canDisconnect = isLinked && linkedIds.length > 1;
+
+      const row = document.createElement('div');
+      row.className = 'linked-row';
+      row.innerHTML = `
+        <div class="linked-row-info">
+          <span class="linked-name">${meta.name}</span>
+          <span class="linked-status ${isLinked ? 'is-connected' : ''}">${isLinked ? 'Connected' : 'Not connected'}</span>
+        </div>
+        <div class="linked-row-actions"></div>
+      `;
+      const actions = row.querySelector('.linked-row-actions');
+
+      if(isLinked){
+        if(id === 'password'){
+          const changeBtn = document.createElement('button');
+          changeBtn.type = 'button';
+          changeBtn.className = 'linked-action-btn';
+          changeBtn.textContent = 'CHANGE';
+          changeBtn.addEventListener('click', () => openPasswordForm(true));
+          actions.appendChild(changeBtn);
+        }
+        const disconnectBtn = document.createElement('button');
+        disconnectBtn.type = 'button';
+        disconnectBtn.className = 'linked-action-btn linked-disconnect';
+        disconnectBtn.textContent = 'DISCONNECT';
+        disconnectBtn.disabled = !canDisconnect;
+        disconnectBtn.title = canDisconnect ? '' : 'You need at least one sign-in method connected.';
+        disconnectBtn.addEventListener('click', () => disconnectProvider(id));
+        actions.appendChild(disconnectBtn);
+      } else {
+        const connectBtn = document.createElement('button');
+        connectBtn.type = 'button';
+        connectBtn.className = 'linked-action-btn linked-connect';
+        connectBtn.textContent = 'CONNECT';
+        connectBtn.addEventListener('click', () => connectProvider(id));
+        actions.appendChild(connectBtn);
+      }
+
+      linkedAccountsList.appendChild(row);
+    });
+  }
+
+  function connectProvider(providerId){
+    linkedAccountsError.textContent = '';
+    const user = auth.currentUser;
+    if(!user) return;
+
+    if(providerId === 'password'){
+      openPasswordForm(false);
+      return;
+    }
+
+    const meta = PROVIDERS_META[providerId];
+    withReauthRetry(() => user.linkWithPopup(meta.providerFactory()))
+      .then(() => renderLinkedAccounts(auth.currentUser))
+      .catch(err => { linkedAccountsError.textContent = friendlyLinkError(err); });
+  }
+
+  function disconnectProvider(providerId){
+    linkedAccountsError.textContent = '';
+    const user = auth.currentUser;
+    if(!user) return;
+
+    if(user.providerData.length <= 1){
+      linkedAccountsError.textContent = 'You need at least one sign-in method connected.';
+      return;
+    }
+
+    withReauthRetry(() => user.unlink(providerId))
+      .then(() => renderLinkedAccounts(auth.currentUser))
+      .catch(err => { linkedAccountsError.textContent = friendlyLinkError(err); });
+  }
+
+  function openPasswordForm(isChange){
+    passwordFormIsChange = isChange;
+    passwordLinkError.textContent = '';
+    linkPassword.value = '';
+    linkPasswordConfirm.value = '';
+
+    if(isChange){
+      linkEmail.style.display = 'none';
+      linkPassword.placeholder = 'New Password';
+    } else {
+      linkEmail.value = '';
+      linkEmail.style.display = 'block';
+      linkPassword.placeholder = 'Password';
+    }
+
+    passwordLinkForm.style.display = 'block';
+  }
+
+  passwordLinkCancelBtn.addEventListener('click', () => {
+    passwordLinkForm.style.display = 'none';
+  });
+
+  passwordLinkSubmitBtn.addEventListener('click', () => {
+    passwordLinkError.textContent = '';
+    const newPassword = linkPassword.value;
+    const confirmPassword = linkPasswordConfirm.value;
+
+    if(!newPassword || !confirmPassword){
+      passwordLinkError.textContent = 'Please fill in all fields.';
+      return;
+    }
+    if(newPassword.length < 6){
+      passwordLinkError.textContent = 'Password should be at least 6 characters.';
+      return;
+    }
+    if(newPassword !== confirmPassword){
+      passwordLinkError.textContent = 'Passwords do not match.';
+      return;
+    }
+
+    const user = auth.currentUser;
+    if(!user) return;
+
+    passwordLinkSubmitBtn.disabled = true;
+    passwordLinkSubmitBtn.textContent = 'SAVING...';
+
+    if(passwordFormIsChange){
+      withReauthRetry(() => user.updatePassword(newPassword))
+        .then(() => {
+          passwordLinkForm.style.display = 'none';
+        })
+        .catch(err => { passwordLinkError.textContent = friendlyLinkError(err); })
+        .finally(() => {
+          passwordLinkSubmitBtn.disabled = false;
+          passwordLinkSubmitBtn.textContent = 'SAVE';
+        });
+    } else {
+      const email = linkEmail.value.trim();
+      if(!email){
+        passwordLinkError.textContent = 'Please enter an email address.';
+        passwordLinkSubmitBtn.disabled = false;
+        passwordLinkSubmitBtn.textContent = 'SAVE';
+        return;
+      }
+      const credential = firebase.auth.EmailAuthProvider.credential(email, newPassword);
+      withReauthRetry(() => user.linkWithCredential(credential))
+        .then(() => {
+          passwordLinkForm.style.display = 'none';
+          renderLinkedAccounts(auth.currentUser);
+        })
+        .catch(err => { passwordLinkError.textContent = friendlyLinkError(err); })
+        .finally(() => {
+          passwordLinkSubmitBtn.disabled = false;
+          passwordLinkSubmitBtn.textContent = 'SAVE';
+        });
     }
   });
 
