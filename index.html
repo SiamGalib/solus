@@ -827,7 +827,72 @@
     border-radius:20px;
     overflow:hidden;
     background:#000;
+    z-index:1;
   }
+
+  /* ---- Night mode: comet streaking behind the tumbler ---- */
+  .hero-comet-layer{
+    position:absolute;
+    inset:-14%;
+    z-index:0;
+    overflow:visible;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .8s ease;
+  }
+  html[data-theme="night"] .hero-comet-layer{
+    opacity:1;
+  }
+  .hero-comet{
+    position:absolute;
+    width:5px;
+    height:5px;
+    background:#eaf2ff;
+    border-radius:50%;
+    filter:drop-shadow(0 0 8px #cfe0ff) drop-shadow(0 0 16px rgba(160,180,255,0.6));
+    animation-name:cometFly;
+    animation-duration:7s;
+    animation-timing-function:linear;
+    animation-iteration-count:infinite;
+  }
+  .hero-comet::before{
+    content:'';
+    position:absolute;
+    top:50%;
+    right:100%;
+    width:150px;
+    height:2px;
+    background:linear-gradient(90deg, rgba(220,232,255,0.95), rgba(220,232,255,0));
+    transform:translateY(-50%) rotate(19deg);
+    transform-origin:right center;
+  }
+  .hero-comet.c2{
+    width:3px;
+    height:3px;
+    animation-name:cometFly2;
+    animation-duration:6s;
+    animation-delay:3.4s;
+  }
+  .hero-comet.c2::before{
+    width:100px;
+    transform:translateY(-50%) rotate(24deg);
+  }
+  @keyframes cometFly{
+    0%{ left:-12%; top:6%; opacity:0; }
+    10%{ opacity:1; }
+    88%{ opacity:1; }
+    100%{ left:112%; top:52%; opacity:0; }
+  }
+  @keyframes cometFly2{
+    0%{ left:-10%; top:22%; opacity:0; }
+    12%{ opacity:1; }
+    85%{ opacity:1; }
+    100%{ left:110%; top:78%; opacity:0; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hero-comet{ animation:none; opacity:0; }
+  }
+
   .slideshow-frame .slide{
     position:absolute;
     top:0; left:0;
@@ -1011,7 +1076,7 @@
   }
   .product-shot{
     position:relative;
-    background:#f2f2f4;
+    background:radial-gradient(ellipse at 50% 38%, #f7f7f9 0%, #eaeaef 55%, #dfdfe6 100%);
     height:420px;
     display:flex;
     align-items:center;
@@ -2453,6 +2518,10 @@
     </div>
 
     <div class="hero-art">
+      <div class="hero-comet-layer" aria-hidden="true">
+        <div class="hero-comet"></div>
+        <div class="hero-comet c2"></div>
+      </div>
       <div class="slideshow-frame" id="slideshowFrame">
         <img id="slide0" class="slide active" src="banner1.png" alt="Solus tumbler lineup">
         <video id="slide1" class="slide" src="add2.mp4" muted playsinline></video>
