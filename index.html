@@ -272,6 +272,81 @@
     }
   }
 
+  /* ---------- NIGHT MODE: STARFIELD + MOON GLOW ---------- */
+  .night-sky-overlay{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:1;
+    overflow:hidden;
+    opacity:0;
+    transition:opacity .8s ease;
+  }
+  html[data-theme="night"] .night-sky-overlay{
+    opacity:1;
+  }
+
+  .moon-glow{
+    position:absolute;
+    top:-8%;
+    left:-8%;
+    width:min(46vw,560px);
+    height:min(46vw,560px);
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(185,195,255,0.28) 0%, rgba(150,160,230,0.14) 40%, rgba(150,160,230,0) 72%);
+    filter:blur(6px);
+  }
+
+  .stars-layer{
+    position:absolute;
+    inset:0;
+  }
+  .stars-layer span{
+    position:absolute;
+    background:#fff;
+    border-radius:50%;
+    animation-name:starTwinkle;
+    animation-iteration-count:infinite;
+    animation-timing-function:ease-in-out;
+    box-shadow:0 0 4px rgba(255,255,255,0.6);
+  }
+  @keyframes starTwinkle{
+    0%,100%{ opacity:.15; transform:scale(0.8); }
+    50%{ opacity:1; transform:scale(1.15); }
+  }
+
+  .shooting-star{
+    position:absolute;
+    top:var(--sy,10%);
+    left:var(--sx,20%);
+    width:3px;
+    height:3px;
+    background:#fff;
+    border-radius:50%;
+    filter:drop-shadow(0 0 6px #fff);
+    animation:shootAcross 1.3s linear forwards;
+  }
+  .shooting-star::before{
+    content:'';
+    position:absolute;
+    top:50%;
+    right:100%;
+    width:140px;
+    height:1px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0));
+    transform:translateY(-50%) rotate(180deg);
+    transform-origin:left center;
+  }
+  @keyframes shootAcross{
+    0%{ transform:translate(0,0); opacity:1; }
+    85%{ opacity:1; }
+    100%{ transform:translate(-340px,300px); opacity:0; }
+  }
+
+  @media (max-width:768px){
+    .moon-glow{ width:70vw; height:70vw; }
+  }
+
   /* ---------- FALLING GIFT BOXES ---------- */
   .gift-box{
     position:fixed;
@@ -450,6 +525,10 @@
     display:none;
     flex-direction:column;
     z-index:200;
+    /* Always-white panel: keep text/border colors fixed dark regardless of theme */
+    --ink:#0c0c0e;
+    --muted:#8a8a93;
+    --line-dark:rgba(0,0,0,0.08);
   }
   .wishlist-dropdown.show{display:flex;}
   .wishlist-items-scroll{
@@ -534,6 +613,10 @@
     display:none;
     flex-direction:column;
     z-index:200;
+    /* Always-white panel: keep text/border colors fixed dark regardless of theme */
+    --ink:#0c0c0e;
+    --muted:#8a8a93;
+    --line-dark:rgba(0,0,0,0.08);
   }
   .cart-dropdown.show{display:flex;}
   .cart-dropdown .cart-empty{
@@ -866,6 +949,13 @@
   background:#fff;
   padding:60px 48px 100px;
   position:relative;
+  /* This section's background is always white by design, so its text/button
+     colors must stay fixed dark values instead of following the day/evening/
+     night theme variables (which flip to light colors and would make text
+     and the "ADD TO CART" button unreadable against the white cards). */
+  --ink:#0c0c0e;
+  --muted:#8a8a93;
+  --line-dark:rgba(0,0,0,0.08);
 }
 
 .section-head{
@@ -1048,6 +1138,10 @@
     position:relative;
     text-align:left;
     overflow:hidden;
+    /* Always-white panel: keep text colors fixed dark regardless of theme */
+    --ink:#0c0c0e;
+    --muted:#8a8a93;
+    --line-dark:rgba(0,0,0,0.08);
   }
   .cp-header{
     display:flex;
@@ -1148,6 +1242,10 @@
     display:flex;
     flex-direction:column;
     justify-content:flex-end;
+    /* Always-white panel: keep text colors fixed dark regardless of theme */
+    --ink:#0c0c0e;
+    --muted:#8a8a93;
+    --line-dark:rgba(0,0,0,0.08);
   }
   .lightbox-color{
     font-size:10px;
@@ -1208,6 +1306,10 @@
     display:flex;
     flex-direction:column;
     position:relative;
+    /* Always-white panel: keep text colors fixed dark regardless of theme */
+    --ink:#0c0c0e;
+    --muted:#8a8a93;
+    --line-dark:rgba(0,0,0,0.08);
   }
   .review-box .close-review{
     position:absolute;
@@ -1364,6 +1466,10 @@
     overflow:hidden;
     display:flex;
     position:relative;
+    /* Always-white panel: keep text colors fixed dark regardless of theme */
+    --ink:#0c0c0e;
+    --muted:#8a8a93;
+    --line-dark:rgba(0,0,0,0.08);
   }
   .checkout-box .close-checkout{
     position:absolute;
@@ -2062,6 +2168,10 @@
   max-width:90%;
   padding:30px;
   border-radius:12px;
+  /* Always-white panel: keep text colors fixed dark regardless of theme */
+  --ink:#0c0c0e;
+  --muted:#8a8a93;
+  --line-dark:rgba(0,0,0,0.08);
   text-align:center;
   position:relative;
 }
@@ -2244,6 +2354,10 @@
 <body>
 <div class="sun-glow-overlay" aria-hidden="true">
   <div class="sun-rays"></div>
+</div>
+<div class="night-sky-overlay" id="nightSkyOverlay" aria-hidden="true">
+  <div class="moon-glow"></div>
+  <div class="stars-layer" id="starsLayer"></div>
 </div>
 <div class="gift-box-container" id="giftBoxContainer"></div>
 
@@ -2930,6 +3044,39 @@ navItems.forEach(item => {
     });
 
     applyTheme(saved);
+  })();
+
+  // ---- Night mode: starfield + occasional shooting star ----
+  (function(){
+    const starsLayer = document.getElementById('starsLayer');
+    const nightOverlay = document.getElementById('nightSkyOverlay');
+    if(!starsLayer || !nightOverlay) return;
+
+    // Scatter a fixed field of twinkling stars once — cheap, static positions,
+    // only visible (via CSS opacity) while Night mode is active.
+    const STAR_COUNT = 90;
+    let html = '';
+    for(let i = 0; i < STAR_COUNT; i++){
+      const size = (Math.random() * 1.8 + 1).toFixed(1);
+      const top = (Math.random() * 100).toFixed(2);
+      const left = (Math.random() * 100).toFixed(2);
+      const duration = (2 + Math.random() * 3).toFixed(2);
+      const delay = (Math.random() * 4).toFixed(2);
+      html += `<span style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;animation-duration:${duration}s;animation-delay:${delay}s;"></span>`;
+    }
+    starsLayer.innerHTML = html;
+
+    // Every so often, send a shooting star across the sky — only while Night mode is on.
+    function spawnShootingStar(){
+      if(document.documentElement.getAttribute('data-theme') !== 'night') return;
+      const star = document.createElement('div');
+      star.className = 'shooting-star';
+      star.style.setProperty('--sx', (Math.random() * 60 + 20) + '%');
+      star.style.setProperty('--sy', (Math.random() * 25) + '%');
+      nightOverlay.appendChild(star);
+      setTimeout(() => star.remove(), 1400);
+    }
+    setInterval(spawnShootingStar, 5000);
   })();
 
   const accountBtn = document.getElementById('accountBtn');
