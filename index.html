@@ -319,6 +319,46 @@
     .moon-glow{ width:70vw; height:70vw; }
   }
 
+  /* ---------- EVENING MODE: DRIFTING FIREFLIES / EMBERS ---------- */
+  .evening-glow-overlay{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:1;
+    overflow:hidden;
+    opacity:0;
+    transition:opacity .8s ease;
+  }
+  html[data-theme="evening"] .evening-glow-overlay{
+    opacity:1;
+  }
+
+  .evening-fireflies span{
+    position:absolute;
+    bottom:-6vh;
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,224,160,1) 0%, rgba(255,178,90,0.75) 45%, rgba(255,178,90,0) 78%);
+    box-shadow:0 0 8px 3px rgba(255,190,110,0.55);
+    animation-name: fireflyDrift, fireflyFlicker;
+    animation-timing-function: ease-in-out, ease-in-out;
+    animation-iteration-count: infinite, infinite;
+  }
+  @keyframes fireflyDrift{
+    0%{ transform:translate(0,0); }
+    50%{ transform:translate(var(--drift-x,24px), -55vh); }
+    100%{ transform:translate(calc(var(--drift-x,24px) * -1), -112vh); }
+  }
+  @keyframes fireflyFlicker{
+    0%,100%{ opacity:.1; }
+    50%{ opacity:1; }
+  }
+
+  @media (max-width:768px){
+    .evening-fireflies span{ width:4px; height:4px; }
+  }
+
   /* ---------- FALLING GIFT BOXES ---------- */
   .gift-box{
     position:fixed;
@@ -2248,6 +2288,7 @@
 
 .account-box h2{
   margin-bottom:10px;
+  color:#0c0c0e;
 }
 
 .account-box p{
@@ -2440,6 +2481,9 @@
 <div class="night-sky-overlay" id="nightSkyOverlay" aria-hidden="true">
   <div class="moon-glow"></div>
   <div class="stars-layer" id="starsLayer"></div>
+</div>
+<div class="evening-glow-overlay" id="eveningGlowOverlay" aria-hidden="true">
+  <div class="evening-fireflies" id="eveningFireflies"></div>
 </div>
 <div class="gift-box-container" id="giftBoxContainer"></div>
 
@@ -3173,6 +3217,24 @@ navItems.forEach(item => {
       html += `<span style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;animation-duration:${duration}s;animation-delay:${delay}s;"></span>`;
     }
     starsLayer.innerHTML = html;
+  })();
+
+  // ---- Evening mode: drifting fireflies / warm embers ----
+  (function(){
+    const fireflies = document.getElementById('eveningFireflies');
+    if(!fireflies) return;
+
+    const FIREFLY_COUNT = 26;
+    let html = '';
+    for(let i = 0; i < FIREFLY_COUNT; i++){
+      const left = (Math.random() * 100).toFixed(2);
+      const duration = (7 + Math.random() * 6).toFixed(2);
+      const delay = (Math.random() * 10).toFixed(2);
+      const driftX = (Math.random() * 60 - 30).toFixed(0);
+      const flickerDuration = (1.2 + Math.random() * 1.6).toFixed(2);
+      html += `<span style="left:${left}%;--drift-x:${driftX}px;animation-duration:${duration}s,${flickerDuration}s;animation-delay:${delay}s,${(Math.random()*2).toFixed(2)}s;"></span>`;
+    }
+    fireflies.innerHTML = html;
   })();
 
   const accountBtn = document.getElementById('accountBtn');
@@ -4582,7 +4644,8 @@ searchClose.addEventListener('click', () => {
     ordersView.style.display = 'none';
     loggedInView.style.display = 'block';
   });
-  document.getElementById('viewWishlistFromAccountBtn').addEventListener('click', () => {
+  document.getElementById('viewWishlistFromAccountBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
     accountModal.classList.remove('show');
     document.getElementById('wishlistDropdown').classList.add('show');
   });
