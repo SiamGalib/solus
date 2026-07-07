@@ -1107,6 +1107,16 @@
     .product-shot::before{ animation:none; opacity:.8; }
   }
   .product-shot img{height:100%; width:auto; max-width:100%; object-fit:contain; position:relative; z-index:1;}
+  .product-shot:hover img{
+    animation:tumblerBob 1.1s ease-in-out infinite;
+  }
+  @keyframes tumblerBob{
+    0%,100%{ transform:translateY(0); }
+    50%{ transform:translateY(-10px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .product-shot:hover img{ animation:none; }
+  }
   .product-info{
     padding:22px 24px 24px;
     flex:1;
