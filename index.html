@@ -2392,6 +2392,18 @@
 .ca-btn.accent{border-color:var(--purple);color:var(--purple-dark);}
 .ca-btn.accent:hover{background:rgba(139,133,232,0.08);}
 
+/* ---------- ORDERS LIST ---------- */
+.order-row{padding:14px 0;border-bottom:1px solid var(--line-dark);}
+.order-row:last-child{border-bottom:none;}
+.order-row-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;}
+.order-row-id{font-weight:800;font-size:13px;color:var(--ink);}
+.order-row-date{font-size:11.5px;color:var(--muted);white-space:nowrap;}
+.order-row-items{font-size:12.5px;color:var(--muted);margin-bottom:6px;line-height:1.5;}
+.order-row-foot{display:flex;justify-content:space-between;align-items:center;}
+.order-row-total{font-weight:700;font-size:13px;color:var(--ink);}
+.order-row-status{font-size:11px;font-weight:700;color:#3a8c5c;text-transform:uppercase;letter-spacing:.3px;}
+.orders-empty{text-align:center;color:var(--muted);font-size:13.5px;padding:50px 10px;}
+
 
 
 .search-overlay{position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(420px,90%);display:none;z-index:10000}
@@ -2749,8 +2761,20 @@
 
     <!-- ---------- LOGGED-IN VIEW ---------- -->
     <div id="loggedInView" style="display:none; text-align:center;">
-      <div id="profileAvatar" style="width:72px;height:72px;border-radius:50%;background:var(--purple);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;overflow:hidden;">A</div>
-      <h2 id="profileName" style="margin-bottom:4px;">Welcome back</h2>
+      <div style="position:relative; width:72px; margin:0 auto 18px;">
+        <div id="profileAvatar" style="width:72px;height:72px;border-radius:50%;background:var(--purple);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;">A</div>
+        <button id="editAvatarBtn" type="button" title="Change profile picture" style="position:absolute;bottom:-2px;right:-2px;width:26px;height:26px;border-radius:50%;background:#111;color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:4px;">
+        <h2 id="profileName" style="margin-bottom:0;">Welcome back</h2>
+        <button id="editNameBtn" type="button" title="Change username" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;display:flex;flex-shrink:0;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </button>
+      </div>
       <p id="profileEmail" style="color:var(--muted); font-size:14px; margin-bottom:28px;">user@example.com</p>
 
       <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
@@ -2766,6 +2790,16 @@
       <div class="divider">OR</div>
 
       <button class="account-create-btn" id="logoutBtn" style="background:transparent; border:1px solid #c0392b; color:#c0392b;">LOG OUT</button>
+    </div>
+
+    <!-- ---------- ORDERS VIEW ---------- -->
+    <div id="ordersView" style="display:none; text-align:left;">
+      <button id="backFromOrdersBtn" type="button" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:12.5px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:4px;margin-bottom:16px;padding:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        BACK
+      </button>
+      <h2 style="text-align:center;">My Orders</h2>
+      <div id="ordersList" style="margin-top:18px;max-height:360px;overflow-y:auto;"></div>
     </div>
   </div>
 </div>
@@ -3369,6 +3403,9 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     setTimeout(()=>{ btn.innerHTML = original; btn.style.background = ''; }, 1100);
   });
 
+  // ---- Order history ----
+  let userOrders = [];
+
   // ---- Wishlist / Watch Later ----
   let wishlistItems = [];
   const wishlistBtn = document.getElementById('wishlistBtn');
@@ -3738,6 +3775,17 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     setTimeout(()=>{
       const orderNum = 'SOLUS-' + Math.floor(100000 + Math.random()*900000);
       coOrderNum.textContent = `Order #${orderNum}`;
+
+      // Save a record of this order so it shows up under "My Orders"
+      const subtotal = cartSubtotal();
+      const tax = subtotal * TAX_RATE;
+      userOrders.unshift({
+        id: orderNum,
+        date: new Date().toISOString(),
+        items: cartItems.map(i => ({ name: i.name, image: i.image, price: i.price, qty: i.qty })),
+        total: subtotal + tax
+      });
+      persistUserData();
 
       coFormCol.style.display = 'none';
       coSummaryCol.style.display = 'none';
@@ -4115,13 +4163,13 @@ searchClose.addEventListener('click', () => {
   function getGuestData(){
     try{
       const raw = localStorage.getItem(GUEST_DATA_KEY);
-      return raw ? JSON.parse(raw) : { cart: [], wishlist: [] };
-    }catch(e){ return { cart: [], wishlist: [] }; }
+      return raw ? JSON.parse(raw) : { cart: [], wishlist: [], orders: [] };
+    }catch(e){ return { cart: [], wishlist: [], orders: [] }; }
   }
 
   function saveGuestData(){
     try{
-      localStorage.setItem(GUEST_DATA_KEY, JSON.stringify({ cart: cartItems, wishlist: wishlistItems }));
+      localStorage.setItem(GUEST_DATA_KEY, JSON.stringify({ cart: cartItems, wishlist: wishlistItems, orders: userOrders }));
     }catch(e){}
   }
 
@@ -4132,6 +4180,7 @@ searchClose.addEventListener('click', () => {
       db.collection('users').doc(currentUserId).set({
         cart: cartItems,
         wishlist: wishlistItems,
+        orders: userOrders,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }).catch(err => console.error('Could not save your cart/wishlist:', err));
     } else {
@@ -4144,6 +4193,8 @@ searchClose.addEventListener('click', () => {
     (data.cart || []).forEach(i => cartItems.push(i));
     wishlistItems.length = 0;
     (data.wishlist || []).forEach(i => wishlistItems.push(i));
+    userOrders.length = 0;
+    (data.orders || []).forEach(o => userOrders.push(o));
     renderCart();
     renderWishlist();
     document.querySelectorAll('.wishlist-heart-btn').forEach(b=>{
@@ -4172,10 +4223,18 @@ searchClose.addEventListener('click', () => {
     dataReadyForSaving = false;
     const guestData = getGuestData();
     db.collection('users').doc(uid).get().then(doc => {
-      const cloudData = doc.exists ? doc.data() : { cart: [], wishlist: [] };
+      const cloudData = doc.exists ? doc.data() : { cart: [], wishlist: [], orders: [] };
       const mergedCart = mergeItemLists(cloudData.cart || [], guestData.cart || [], true);
       const mergedWishlist = mergeItemLists(cloudData.wishlist || [], guestData.wishlist || [], false);
-      applyLoadedData({ cart: mergedCart, wishlist: mergedWishlist });
+      const mergedOrders = [...(cloudData.orders || []), ...(guestData.orders || [])]
+        .sort((a,b) => new Date(b.date) - new Date(a.date));
+      applyLoadedData({ cart: mergedCart, wishlist: mergedWishlist, orders: mergedOrders });
+
+      // Apply a custom profile picture saved on this account, if any
+      if(cloudData.photoBase64){
+        profileAvatar.innerHTML = `<img src="${cloudData.photoBase64}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+      }
+
       localStorage.removeItem(GUEST_DATA_KEY);
       dataReadyForSaving = true;
       persistUserData();
@@ -4486,12 +4545,113 @@ searchClose.addEventListener('click', () => {
     });
   });
 
+  // ---------- MY ORDERS ----------
+  const ordersView = document.getElementById('ordersView');
+  const ordersListEl = document.getElementById('ordersList');
+
+  function renderOrdersList(){
+    if(userOrders.length === 0){
+      ordersListEl.innerHTML = `<div class="orders-empty">You haven't placed any orders yet.</div>`;
+      return;
+    }
+    ordersListEl.innerHTML = userOrders.map(order => {
+      const itemsSummary = (order.items || []).map(i => `${i.name} × ${i.qty}`).join(', ');
+      const dateLabel = new Date(order.date).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+      return `
+        <div class="order-row">
+          <div class="order-row-head">
+            <span class="order-row-id">Order #${order.id}</span>
+            <span class="order-row-date">${dateLabel}</span>
+          </div>
+          <div class="order-row-items">${itemsSummary}</div>
+          <div class="order-row-foot">
+            <span class="order-row-status">Confirmed</span>
+            <span class="order-row-total">$${order.total.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   document.getElementById('viewOrdersBtn').addEventListener('click', () => {
-    alert('Order history is coming soon!');
+    loggedInView.style.display = 'none';
+    ordersView.style.display = 'block';
+    renderOrdersList();
+  });
+  document.getElementById('backFromOrdersBtn').addEventListener('click', () => {
+    ordersView.style.display = 'none';
+    loggedInView.style.display = 'block';
   });
   document.getElementById('viewWishlistFromAccountBtn').addEventListener('click', () => {
     accountModal.classList.remove('show');
     document.getElementById('wishlistDropdown').classList.add('show');
+  });
+
+  // Make sure the orders view is reset back to the profile view whenever the modal reopens
+  accountBtn.addEventListener('click', () => {
+    ordersView.style.display = 'none';
+    if(auth.currentUser) loggedInView.style.display = 'block';
+  });
+
+  // ---------- EDIT USERNAME ----------
+  document.getElementById('editNameBtn').addEventListener('click', () => {
+    const user = auth.currentUser;
+    if(!user) return;
+    const current = user.displayName || (user.email ? user.email.split('@')[0] : '');
+    const newName = prompt('Enter your new username:', current);
+    if(newName === null) return; // cancelled
+    const trimmed = newName.trim();
+    if(!trimmed) { alert('Username cannot be empty.'); return; }
+    user.updateProfile({ displayName: trimmed })
+      .then(() => {
+        profileName.textContent = `Hi, ${trimmed}`;
+      })
+      .catch(err => alert(err.message));
+  });
+
+  // ---------- EDIT PROFILE PICTURE ----------
+  const avatarFileInput = document.getElementById('avatarFileInput');
+  document.getElementById('editAvatarBtn').addEventListener('click', () => {
+    if(!auth.currentUser) return;
+    avatarFileInput.click();
+  });
+
+  avatarFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const user = auth.currentUser;
+    if(!file || !user) return;
+    if(!file.type.startsWith('image/')){
+      alert('Please choose an image file.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        // Downscale + center-crop to a small square so it stores cheaply in Firestore
+        const size = 200;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        profileAvatar.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+
+        db.collection('users').doc(user.uid).set({
+          photoBase64: dataUrl,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(err => alert('Could not save your new profile picture: ' + err.message));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    avatarFileInput.value = '';
   });
 </script>
 
