@@ -2981,7 +2981,6 @@
         <span id="communityFileLabel">Choose a photo</span>
       </label>
       <input type="file" id="communityFileInput" accept="image/*" style="display:none;" required>
-      <input type="text" id="communityName" placeholder="Your name" required style="width:100%; padding:11px 13px; border:1px solid var(--line-dark); border-radius:6px; font-size:13.5px; margin-bottom:10px; font-family:inherit;">
       <textarea id="communityCaption" placeholder="Say something about your moment..." required style="width:100%; padding:11px 13px; border:1px solid var(--line-dark); border-radius:6px; font-size:13.5px; min-height:70px; resize:vertical; margin-bottom:16px; font-family:inherit;"></textarea>
       <button type="submit" class="btn btn-primary" style="width:100%;">POST</button>
       <div id="communityFormMsg" style="display:none; text-align:center; color:#3a8c5c; font-size:13px; font-weight:700; margin-top:12px;">Thanks for sharing! 🎉</div>
@@ -3539,15 +3538,32 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     grid.appendChild(card);
   });
 
+  // ---- Require an account for cart / watchlist / community actions ----
+  // (auth/accountModal are defined later in the Firebase script block, but since
+  // this only runs inside click handlers — never at page-load time — those
+  // globals are already ready by the time a real user can click anything.)
+  function requireAuth(message){
+    if(auth.currentUser) return true;
+    accountModal.classList.add('show');
+    document.getElementById('createAccountView').style.display = 'none';
+    document.getElementById('loggedInView').style.display = 'none';
+    document.getElementById('authFormView').style.display = 'block';
+    const subtitleEl = document.getElementById('accountModalSubtitle');
+    if(subtitleEl) subtitleEl.textContent = message || 'Please log in to continue.';
+    return false;
+  }
+
   grid.addEventListener('click', (e)=>{
     const heartBtn = e.target.closest('.wishlist-heart-btn');
     if(heartBtn){
+      if(!requireAuth('Log in to save items to your watchlist.')) return;
       const idx = heartBtn.dataset.idx;
       toggleWishlist(idx);
       return;
     }
     const btn = e.target.closest('.add-cart');
     if(!btn) return;
+    if(!requireAuth('Log in to add items to your cart.')) return;
     const idx = btn.dataset.idx;
     const p = products[idx];
     const existing = cartItems.find(i => i.image === p.image);
@@ -4818,7 +4834,6 @@ searchClose.addEventListener('click', () => {
     const communityFileLabel = document.getElementById('communityFileLabel');
     const communityPreviewWrap = document.getElementById('communityPreviewWrap');
     const communityPreviewImg = document.getElementById('communityPreviewImg');
-    const communityName = document.getElementById('communityName');
     const communityCaption = document.getElementById('communityCaption');
     const communityFormMsg = document.getElementById('communityFormMsg');
 
@@ -4828,21 +4843,17 @@ searchClose.addEventListener('click', () => {
     let posts = [];
     let pendingImageData = null;
 
-    // Every visitor — logged in or not — needs a stable identity so we know
-    // whose like/comment/repost is whose, and so the same person can't like
-    // a post twice. Logged-in users use their Firebase uid; guests get a
-    // random id saved in this browser only.
+    // Every post/like/comment/repost is tied to the logged-in account —
+    // guests are prompted to log in before any of these actions go through.
     function getIdentity(){
       const user = auth.currentUser;
-      if(user){
-        return { id: user.uid, name: user.displayName || (user.email ? user.email.split('@')[0] : 'User') };
-      }
-      let anonId = localStorage.getItem('solus_anon_id');
-      if(!anonId){
-        anonId = 'guest-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-        localStorage.setItem('solus_anon_id', anonId);
-      }
-      return { id: anonId, name: null };
+      if(!user) return null;
+      const avatarImg = profileAvatar.querySelector('img');
+      return {
+        id: user.uid,
+        name: user.displayName || (user.email ? user.email.split('@')[0] : 'User'),
+        photo: avatarImg ? avatarImg.src : null
+      };
     }
 
     function timeAgo(date){
@@ -4870,7 +4881,8 @@ searchClose.addEventListener('click', () => {
         return;
       }
       communityEmpty.style.display = 'none';
-      const myId = getIdentity().id;
+      const myIdentity = getIdentity();
+      const myId = myIdentity ? myIdentity.id : null;
 
       communityGrid.innerHTML = posts.map((post) => {
         const likes = post.likes || [];
@@ -4895,12 +4907,12 @@ searchClose.addEventListener('click', () => {
         <div class="cp-card" data-id="${post.id}">
           ${repostBanner}
           <div class="cp-header">
-            <div class="cp-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--purple);color:#fff;font-weight:700;font-size:14px;">${escapeHtml((post.name || '?').charAt(0).toUpperCase())}</div>
+            <div class="cp-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--purple);color:#fff;font-weight:700;font-size:14px;overflow:hidden;">${post.authorPhoto ? `<img src="${post.authorPhoto}" style="width:100%;height:100%;object-fit:cover;" alt="">` : escapeHtml((post.name || '?').charAt(0).toUpperCase())}</div>
             <div class="cp-header-text">
               <span class="cp-username">${escapeHtml(post.name)}</span>
               <span class="cp-time">${timeAgo(createdDate)}${post.editedAt ? ' · edited' : ''}</span>
             </div>
-            ${post.authorId === myId ? `
+            ${(myId && (!post.authorId || post.authorId === myId)) ? `
             <div style="margin-left:auto; display:flex; gap:2px;">
               <button type="button" class="cp-edit-btn" title="Edit post" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:5px;display:flex;">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -4941,6 +4953,7 @@ searchClose.addEventListener('click', () => {
       // Like
       communityGrid.querySelectorAll('.cp-like-action').forEach(btn => {
         btn.addEventListener('click', () => {
+          if(!requireAuth('Log in to like posts.')) return;
           const id = btn.closest('.cp-card').dataset.id;
           const identity = getIdentity();
           const post = posts.find(p => p.id === id);
@@ -4953,7 +4966,7 @@ searchClose.addEventListener('click', () => {
         });
       });
 
-      // Toggle comment panel
+      // Toggle comment panel (viewing comments doesn't require login)
       communityGrid.querySelectorAll('.cp-comment-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
           const panel = btn.closest('.cp-card').querySelector('.cp-comments');
@@ -4965,16 +4978,15 @@ searchClose.addEventListener('click', () => {
       communityGrid.querySelectorAll('.cp-comment-form').forEach(form => {
         form.addEventListener('submit', (e) => {
           e.preventDefault();
+          if(!requireAuth('Log in to comment.')) return;
           const id = form.closest('.cp-card').dataset.id;
           const input = form.querySelector('input');
           const text = input.value.trim();
           if(!text) return;
           const identity = getIdentity();
-          const commenterName = identity.name || prompt('Your name for this comment:');
-          if(!commenterName) return;
           postsCol.doc(id).update({
             comments: firebase.firestore.FieldValue.arrayUnion({
-              name: commenterName,
+              name: identity.name,
               text: text,
               date: new Date().toISOString()
             })
@@ -4986,6 +4998,7 @@ searchClose.addEventListener('click', () => {
       // Repost
       communityGrid.querySelectorAll('.cp-repost-action').forEach(btn => {
         btn.addEventListener('click', () => {
+          if(!requireAuth('Log in to repost.')) return;
           const id = btn.closest('.cp-card').dataset.id;
           const identity = getIdentity();
           const post = posts.find(p => p.id === id);
@@ -4996,7 +5009,6 @@ searchClose.addEventListener('click', () => {
             reposts: firebase.firestore.FieldValue.arrayUnion(identity.id)
           }).catch(err => console.error('Could not update repost count:', err));
 
-          const repostedByName = identity.name || prompt('Your name (shown as who reposted this):') || 'Someone';
           postsCol.add({
             name: post.name,
             caption: post.caption,
@@ -5006,8 +5018,9 @@ searchClose.addEventListener('click', () => {
             comments: [],
             reposts: [],
             authorId: identity.id,
+            authorPhoto: identity.photo || null,
             repostOf: post.repostOf ? post.repostOf : { id: post.id, name: post.name },
-            repostedByName: repostedByName
+            repostedByName: identity.name
           }).catch(err => console.error('Could not create repost:', err));
         });
       });
@@ -5015,6 +5028,7 @@ searchClose.addEventListener('click', () => {
       // Edit (owner only — button is only rendered for the post's own author)
       communityGrid.querySelectorAll('.cp-edit-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+          if(!requireAuth('Log in to edit your post.')) return;
           const card = btn.closest('.cp-card');
           const id = card.dataset.id;
           const post = posts.find(p => p.id === id);
@@ -5042,6 +5056,7 @@ searchClose.addEventListener('click', () => {
       // Delete (owner only)
       communityGrid.querySelectorAll('.cp-delete-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+          if(!requireAuth('Log in to delete your post.')) return;
           const id = btn.closest('.cp-card').dataset.id;
           if(!confirm('Delete this post? This cannot be undone.')) return;
           postsCol.doc(id).delete().catch(err => alert('Could not delete post: ' + err.message));
@@ -5058,10 +5073,9 @@ searchClose.addEventListener('click', () => {
     }
 
     postMomentBtn.addEventListener('click', () => {
+      if(!requireAuth('Log in to share a moment with the community.')) return;
       resetForm();
       communityFormMsg.style.display = 'none';
-      const identity = getIdentity();
-      if(identity.name) communityName.value = identity.name;
       communityModal.classList.add('show');
     });
     closeCommunityModal.addEventListener('click', () => communityModal.classList.remove('show'));
@@ -5101,19 +5115,22 @@ searchClose.addEventListener('click', () => {
 
     communityPostForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      if(!requireAuth('Log in to share a moment with the community.')) return;
       if(!pendingImageData){
         alert('Please choose a photo to share.');
         return;
       }
+      const identity = getIdentity();
       postsCol.add({
-        name: communityName.value.trim() || 'Anonymous',
+        name: identity.name,
         caption: communityCaption.value.trim(),
         image: pendingImageData,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         likes: [],
         comments: [],
         reposts: [],
-        authorId: getIdentity().id
+        authorId: identity.id,
+        authorPhoto: identity.photo || null
       }).then(() => {
         communityFormMsg.style.display = 'block';
         setTimeout(() => { communityModal.classList.remove('show'); }, 900);
