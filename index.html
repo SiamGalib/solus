@@ -2725,6 +2725,17 @@
 }
 .search-highlight{outline:3px solid #aeecff;transition:.3s}
 
+.search-suggestions{margin-top:8px;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);max-height:360px;overflow-y:auto;display:none;}
+.search-suggestions.show{display:block;}
+.search-suggestion-item{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;transition:background .15s ease;}
+.search-suggestion-item:hover{background:#f4f4f6;}
+.search-suggestion-item img{width:40px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#eee;}
+.search-suggestion-info{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.search-suggestion-name{font-size:13.5px;font-weight:600;color:#0c0c0e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-suggestion-title{font-size:11.5px;color:#8a8a93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-suggestion-price{font-size:12.5px;font-weight:700;color:#0c0c0e;margin-left:auto;flex-shrink:0;padding-left:8px;}
+.search-no-results{padding:16px 12px;text-align:center;font-size:13px;color:#8a8a93;}
+
 
 </style>
 </head>
@@ -3197,6 +3208,7 @@
     ✕
   </button>
 </div>
+  <div class="search-suggestions" id="searchSuggestions"></div>
   </div>
 </div>
 
@@ -4834,32 +4846,91 @@ const searchOverlay=document.getElementById('searchOverlay');
 const searchInput=document.getElementById('searchInput');
 const searchGo=document.getElementById('searchGo');
 const searchClose=document.getElementById('searchClose');
+const searchSuggestions=document.getElementById('searchSuggestions');
 
 searchBtn.addEventListener('click',()=>{
  searchOverlay.classList.add('show');
  searchInput.focus();
 });
 
-searchOverlay.addEventListener('click',(e)=>{
- 
-});
-
-function runSearch(){
- const q=searchInput.value.toLowerCase().trim();
- document.querySelectorAll('.product-card').forEach(card=>{
-   const hit=card.innerText.toLowerCase().includes(q);
-   card.style.display=(q===''||hit)?'block':'none';
-   card.classList.toggle('search-highlight',hit && q!=='');
- });
-}
-searchClose.addEventListener('click', () => {
+function closeSearch(){
   searchOverlay.classList.remove('show');
   searchInput.value = '';
+  searchSuggestions.classList.remove('show');
+  searchSuggestions.innerHTML = '';
+}
 
-  document.querySelectorAll('.product-card').forEach(card => {
-    card.style.display = 'block';
-    card.classList.remove('search-highlight');
-  });
+function goToProduct(idx){
+  const card = grid.children[idx];
+  closeSearch();
+  if(card){
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.classList.add('search-highlight');
+    setTimeout(()=> card.classList.remove('search-highlight'), 2000);
+  }
+}
+
+function renderSuggestions(){
+  const q = searchInput.value.toLowerCase().trim();
+  if(q===''){
+    searchSuggestions.classList.remove('show');
+    searchSuggestions.innerHTML = '';
+    return;
+  }
+
+  const matches = products
+    .map((p, idx) => ({p, idx}))
+    .filter(({p}) => p.name.toLowerCase().includes(q) || p.title.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const aStarts = (a.p.name.toLowerCase().startsWith(q) || a.p.title.toLowerCase().startsWith(q)) ? 1 : 0;
+      const bStarts = (b.p.name.toLowerCase().startsWith(q) || b.p.title.toLowerCase().startsWith(q)) ? 1 : 0;
+      return bStarts - aStarts;
+    })
+    .slice(0, 8);
+
+  if(matches.length === 0){
+    searchSuggestions.innerHTML = '<div class="search-no-results">No products found</div>';
+    searchSuggestions.classList.add('show');
+    return;
+  }
+
+  searchSuggestions.innerHTML = matches.map(({p, idx}) => `
+    <div class="search-suggestion-item" data-idx="${idx}">
+      <img src="${p.image}" alt="${p.name}">
+      <div class="search-suggestion-info">
+        <span class="search-suggestion-name">${p.name}</span>
+        <span class="search-suggestion-title">${p.title}</span>
+      </div>
+      <span class="search-suggestion-price">$${p.price.toFixed(2)}</span>
+    </div>
+  `).join('');
+  searchSuggestions.classList.add('show');
+}
+
+searchInput.addEventListener('input', renderSuggestions);
+
+searchInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    const first = searchSuggestions.querySelector('.search-suggestion-item');
+    if(first) goToProduct(first.dataset.idx);
+  }
+});
+
+searchSuggestions.addEventListener('click', (e) => {
+  const item = e.target.closest('.search-suggestion-item');
+  if(!item) return;
+  goToProduct(item.dataset.idx);
+});
+
+searchGo.addEventListener('click', renderSuggestions);
+
+searchClose.addEventListener('click', closeSearch);
+
+// Clicking anywhere outside the search box closes it
+document.addEventListener('click', (e) => {
+  if(!searchOverlay.classList.contains('show')) return;
+  if(searchOverlay.contains(e.target) || e.target.closest('#searchBtn')) return;
+  closeSearch();
 });
 
 </script>
