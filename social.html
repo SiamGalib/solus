@@ -144,9 +144,94 @@
     .nav{padding:14px 20px;}
     .feed-title-block, .compose-wrap, .feed-wrap{padding-left:14px; padding-right:14px;}
   }
+
+  /* ---------- SUMMER SUN-RAY GLOW OVERLAY ---------- */
+  .sun-glow-overlay{
+    position:fixed; top:0; right:0;
+    width:min(70vw, 900px); height:min(70vw, 900px);
+    pointer-events:none; z-index:1; overflow:hidden;
+    mix-blend-mode:screen; opacity:0.55;
+  }
+  .sun-glow-overlay::before{
+    content:""; position:absolute; top:-30%; right:-30%; width:80%; height:80%;
+    background:radial-gradient(circle, rgba(255,210,120,0.55) 0%, rgba(255,180,90,0.25) 35%, rgba(255,180,90,0) 70%);
+    filter:blur(10px);
+  }
+  .sun-rays{
+    position:absolute; top:-20%; right:-20%; width:140%; height:140%;
+    background:conic-gradient(from 0deg,
+      rgba(255,214,140,0.16) 0deg, rgba(255,214,140,0) 8deg, rgba(255,214,140,0) 22deg,
+      rgba(255,214,140,0.14) 30deg, rgba(255,214,140,0) 38deg, rgba(255,214,140,0) 52deg,
+      rgba(255,214,140,0.16) 60deg, rgba(255,214,140,0) 68deg, rgba(255,214,140,0) 82deg,
+      rgba(255,214,140,0.14) 90deg, rgba(255,214,140,0) 98deg, rgba(255,214,140,0) 112deg,
+      rgba(255,214,140,0.16) 120deg, rgba(255,214,140,0) 128deg, rgba(255,214,140,0) 360deg);
+    animation: sunRotate 90s linear infinite;
+    border-radius:50%;
+  }
+  @keyframes sunRotate{ to{ transform:rotate(360deg); } }
+  html[data-theme="night"] .sun-glow-overlay{ opacity:0.15; }
+  html[data-theme="evening"] .sun-glow-overlay{ opacity:0.35; }
+  @media (max-width:768px){ .sun-glow-overlay{ width:100vw; height:60vw; } }
+
+  /* ---------- NIGHT MODE: STARFIELD + MOON GLOW ---------- */
+  .night-sky-overlay{
+    position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden;
+    opacity:0; transition:opacity .8s ease;
+  }
+  html[data-theme="night"] .night-sky-overlay{ opacity:1; }
+  .moon-glow{
+    position:absolute; top:-8%; left:-8%; width:min(46vw,560px); height:min(46vw,560px);
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(185,195,255,0.28) 0%, rgba(150,160,230,0.14) 40%, rgba(150,160,230,0) 72%);
+    filter:blur(6px);
+  }
+  .stars-layer{ position:absolute; inset:0; }
+  .stars-layer span{
+    position:absolute; background:#fff; border-radius:50%;
+    animation-name:starTwinkle; animation-iteration-count:infinite; animation-timing-function:ease-in-out;
+    box-shadow:0 0 4px rgba(255,255,255,0.6);
+  }
+  @keyframes starTwinkle{ 0%,100%{ opacity:.15; transform:scale(0.8); } 50%{ opacity:1; transform:scale(1.15); } }
+  @media (max-width:768px){ .moon-glow{ width:70vw; height:70vw; } }
+
+  /* ---------- EVENING MODE: DRIFTING FIREFLIES / EMBERS ---------- */
+  .evening-glow-overlay{
+    position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden;
+    opacity:0; transition:opacity .8s ease;
+  }
+  html[data-theme="evening"] .evening-glow-overlay{ opacity:1; }
+  .evening-fireflies span{
+    position:absolute; bottom:-6vh; width:5px; height:5px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,224,160,1) 0%, rgba(255,178,90,0.75) 45%, rgba(255,178,90,0) 78%);
+    box-shadow:0 0 8px 3px rgba(255,190,110,0.55);
+    animation-name: fireflyDrift, fireflyFlicker;
+    animation-timing-function: ease-in-out, ease-in-out;
+    animation-iteration-count: infinite, infinite;
+  }
+  @keyframes fireflyDrift{
+    0%{ transform:translate(0,0); }
+    50%{ transform:translate(var(--drift-x,24px), -55vh); }
+    100%{ transform:translate(calc(var(--drift-x,24px) * -1), -112vh); }
+  }
+  @keyframes fireflyFlicker{ 0%,100%{ opacity:.1; } 50%{ opacity:1; } }
+  @media (max-width:768px){ .evening-fireflies span{ width:4px; height:4px; } }
+
+  /* Keep real page content above the fixed ambient overlays */
+  header, .feed-title-block, .compose-wrap, .feed-wrap{ position:relative; z-index:2; }
 </style>
 </head>
 <body>
+<div class="sun-glow-overlay" aria-hidden="true">
+  <div class="sun-rays"></div>
+</div>
+<div class="night-sky-overlay" id="nightSkyOverlay" aria-hidden="true">
+  <div class="moon-glow"></div>
+  <div class="stars-layer" id="starsLayer"></div>
+</div>
+<div class="evening-glow-overlay" id="eveningGlowOverlay" aria-hidden="true">
+  <div class="evening-fireflies" id="eveningFireflies"></div>
+</div>
+
 
 <header>
   <nav class="nav">
@@ -224,6 +309,41 @@
         localStorage.setItem('solus-theme', theme);
       });
     });
+  })();
+
+  // ---- Night mode: starfield ----
+  (function(){
+    const starsLayer = document.getElementById('starsLayer');
+    const nightOverlay = document.getElementById('nightSkyOverlay');
+    if(!starsLayer || !nightOverlay) return;
+    const STAR_COUNT = 90;
+    let html = '';
+    for(let i = 0; i < STAR_COUNT; i++){
+      const size = (Math.random() * 1.8 + 1).toFixed(1);
+      const top = (Math.random() * 100).toFixed(2);
+      const left = (Math.random() * 100).toFixed(2);
+      const duration = (2 + Math.random() * 3).toFixed(2);
+      const delay = (Math.random() * 4).toFixed(2);
+      html += `<span style="width:${size}px;height:${size}px;top:${top}%;left:${left}%;animation-duration:${duration}s;animation-delay:${delay}s;"></span>`;
+    }
+    starsLayer.innerHTML = html;
+  })();
+
+  // ---- Evening mode: drifting fireflies / warm embers ----
+  (function(){
+    const fireflies = document.getElementById('eveningFireflies');
+    if(!fireflies) return;
+    const FIREFLY_COUNT = 26;
+    let html = '';
+    for(let i = 0; i < FIREFLY_COUNT; i++){
+      const left = (Math.random() * 100).toFixed(2);
+      const duration = (7 + Math.random() * 6).toFixed(2);
+      const delay = (Math.random() * 10).toFixed(2);
+      const driftX = (Math.random() * 60 - 30).toFixed(0);
+      const flickerDuration = (1.2 + Math.random() * 1.6).toFixed(2);
+      html += `<span style="left:${left}%;--drift-x:${driftX}px;animation-duration:${duration}s,${flickerDuration}s;animation-delay:${delay}s,${(Math.random()*2).toFixed(2)}s;"></span>`;
+    }
+    fireflies.innerHTML = html;
   })();
 
   // ---------- Social feed ----------
