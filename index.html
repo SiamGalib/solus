@@ -1813,6 +1813,79 @@
   }
   .co-crypto-address-row button:hover{background:#e0e0e5;}
   .co-crypto-note{font-size:11px;color:var(--muted);line-height:1.5;}
+  /* ---- wallet connect (MetaMask-style) ---- */
+  .co-wallet-connect{
+    margin-bottom:14px;
+  }
+  .co-wallet-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border:1px solid var(--line-dark);
+    border-radius:10px;
+    padding:12px 14px;
+    background:#fafafb;
+    flex-wrap:wrap;
+  }
+  .co-wallet-info{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:12.5px;
+    color:var(--ink);
+    min-width:0;
+  }
+  .co-wallet-info code{
+    font-size:11.5px;
+    font-family:'Courier New',monospace;
+    background:#fff;
+    border:1px solid #ddd;
+    border-radius:5px;
+    padding:2px 6px;
+  }
+  .co-wallet-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:#3a8c5c;
+    flex-shrink:0;
+    box-shadow:0 0 0 3px rgba(58,140,92,0.18);
+  }
+  .co-wallet-network{
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:var(--muted);
+    background:#eee;
+    padding:2px 7px;
+    border-radius:20px;
+  }
+  #coConnectWalletBtn, #coDisconnectWalletBtn{
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    border-radius:7px;
+    padding:9px 14px;
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:.4px;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  #coConnectWalletBtn:hover, #coDisconnectWalletBtn:hover{background:var(--purple-dark);}
+  #coDisconnectWalletBtn{background:#e5e5ea;color:#3a3a42;}
+  #coDisconnectWalletBtn:hover{background:#d8d8de;}
+  .co-wallet-note{
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-top:8px;
+    padding:8px 10px;
+    background:#fafafb;
+    border:1px solid var(--line-dark);
+    border-radius:7px;
+  }
   .co-card-input-wrap{position:relative;}
   .co-card-input-wrap .co-card-icon{
     position:absolute;
@@ -2614,6 +2687,9 @@
       <button aria-label="Refer a friend" id="referralBtn" title="Refer & Earn">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
       </button>
+      <button aria-label="My Wallet" id="walletBtn" title="My Wallet">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H5a2 2 0 0 1 0-4h13a1 1 0 0 1 1 1v3z"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/><path d="M21 12a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h-4a3 3 0 0 1 0-6h4z"/></svg>
+      </button>
       <button aria-label="Search" id="searchBtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       <button aria-label="Account" id="accountBtn">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3069,6 +3145,37 @@
   </div>
 </div>
 
+<div class="campaign-modal" id="walletModal">
+  <div class="campaign-modal-inner" style="max-width:440px; padding:30px 26px 26px;">
+    <button class="campaign-close" id="closeWalletModal">✕</button>
+    <h3 style="font-family:'Archivo',sans-serif; font-size:22px; font-weight:800; margin-bottom:6px;">My Wallet</h3>
+    <p style="color:var(--muted); font-size:13.5px; line-height:1.6; margin-bottom:20px;">Your balances are kept separately below and are applied automatically at checkout, up to your order total.</p>
+
+    <div id="walletLoggedOut" style="display:none;">
+      <p style="font-size:13.5px; margin-bottom:14px;">Log in to view your refund and referral balances.</p>
+      <button type="button" class="btn btn-primary" id="walletLoginBtn" style="width:100%;">LOG IN</button>
+    </div>
+
+    <div id="walletLoggedIn" style="display:none;">
+      <div style="display:flex; gap:12px; margin-bottom:14px;">
+        <div style="flex:1; text-align:center; background:#f6f6f8; border-radius:8px; padding:16px 8px;">
+          <div style="font-size:22px; font-weight:800; color:var(--purple);" id="walletRefundAmount">$0.00</div>
+          <div style="font-size:10.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px;">Refund Credit</div>
+        </div>
+        <div style="flex:1; text-align:center; background:#f6f6f8; border-radius:8px; padding:16px 8px;">
+          <div style="font-size:22px; font-weight:800; color:var(--purple);" id="walletReferralAmount">$0.00</div>
+          <div style="font-size:10.5px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px;">Referral Credit</div>
+        </div>
+      </div>
+      <div style="text-align:center; background:var(--ink); color:#fff; border-radius:8px; padding:14px 8px; margin-bottom:6px;">
+        <div style="font-size:24px; font-weight:800;" id="walletTotalAmount">$0.00</div>
+        <div style="font-size:10.5px; opacity:.75; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-top:2px;">Total Available Balance</div>
+      </div>
+      <p style="font-size:11.5px; color:var(--muted); margin-top:14px; line-height:1.5;">Refund credit comes from returned or cancelled orders. Referral credit comes from friends you've referred placing an order. Both are shown separately here, and combined automatically as available credit at checkout.</p>
+    </div>
+  </div>
+</div>
+
 <div class="review-modal" id="reviewModal">
   <div class="review-box">
     <button class="close-review" id="closeReview">✕</button>
@@ -3216,15 +3323,36 @@
             <select id="coCryptoCoin">
               <option value="BTC">Bitcoin (BTC)</option>
               <option value="ETH">Ethereum (ETH)</option>
-              <option value="USDC">USD Coin (USDC)</option>
+              <option value="BNB">BNB (BNB Smart Chain)</option>
             </select>
           </div>
+
+          <!-- ---- Wallet connect (MetaMask-style) — available for ETH and BNB ---- -->
+          <div class="co-wallet-connect" id="coWalletConnect">
+            <div class="co-wallet-row" id="coWalletDisconnected">
+              <div class="co-wallet-info">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H5a2 2 0 0 1 0-4h13a1 1 0 0 1 1 1v3z"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/><path d="M21 12a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h-4a3 3 0 0 1 0-6h4z"/></svg>
+                <span>Connect a wallet (MetaMask) to pay directly</span>
+              </div>
+              <button type="button" id="coConnectWalletBtn">Connect Wallet</button>
+            </div>
+            <div class="co-wallet-row" id="coWalletConnected" style="display:none;">
+              <div class="co-wallet-info">
+                <span class="co-wallet-dot"></span>
+                <span>Connected: <code id="coWalletAddress"></code></span>
+                <span class="co-wallet-network" id="coWalletNetwork"></span>
+              </div>
+              <button type="button" id="coDisconnectWalletBtn">Disconnect</button>
+            </div>
+            <div class="co-wallet-note" id="coWalletNote" style="display:none;">Bitcoin doesn't support wallet connect (BTC isn't compatible with MetaMask). Send BTC manually to the address below.</div>
+          </div>
+
           <div class="co-crypto-box">
             <div class="co-crypto-qr" id="coCryptoQr"></div>
             <div class="co-crypto-details">
               <div class="co-crypto-amount" id="coCryptoAmount">0.00000000 BTC</div>
               <div class="co-crypto-fiat" id="coCryptoFiat">≈ $0.00</div>
-              <div class="co-crypto-label">Send exact amount to</div>
+              <div class="co-crypto-label" id="coCryptoAddrLabel">Send exact amount to</div>
               <div class="co-crypto-address-row">
                 <code id="coCryptoAddress"></code>
                 <button type="button" id="coCopyAddress">Copy</button>
@@ -3672,6 +3800,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
   let myReferralCredit = 0;
   let myReferredBy = null;
   let myReferredCount = 0;
+  let myRefundCredit = 0;
 
   // ---- Wishlist / Watch Later ----
   let wishlistItems = [];
@@ -3859,18 +3988,23 @@ document.querySelectorAll('.social-btn').forEach(btn => {
       payBtnLabelEl.innerHTML = `PAY <span id="payBtnAmount">$${total.toFixed(2)}</span>`;
     } else if(currentMethod === 'paypal'){
       payBtnLabelEl.textContent = 'CONTINUE TO PAYPAL';
+    } else if(currentMethod === 'crypto'){
+      const coin = document.getElementById('coCryptoCoin') ? document.getElementById('coCryptoCoin').value : null;
+      const walletActive = (coin === 'ETH' || coin === 'BNB') && typeof connectedWallet !== 'undefined' && connectedWallet;
+      payBtnLabelEl.textContent = walletActive ? 'CONFIRM PAYMENT IN WALLET' : "I'VE SENT THE PAYMENT";
     } else {
       payBtnLabelEl.textContent = "I'VE SENT THE PAYMENT";
     }
   }
 
-  // ---- crypto panel: mock rates, address, QR ----
-  const CRYPTO_RATES = { BTC: 62000, ETH: 3400, USDC: 1 };
-  const CRYPTO_DECIMALS = { BTC: 8, ETH: 6, USDC: 2 };
+  // ---- crypto panel: mock rates, address, QR (BTC, ETH, BNB only) ----
+  const CRYPTO_RATES = { BTC: 62000, ETH: 3400, BNB: 560 };
+  const CRYPTO_DECIMALS = { BTC: 8, ETH: 6, BNB: 5 };
   const coCryptoCoin = document.getElementById('coCryptoCoin');
   const coCryptoAmount = document.getElementById('coCryptoAmount');
   const coCryptoFiat = document.getElementById('coCryptoFiat');
   const coCryptoAddress = document.getElementById('coCryptoAddress');
+  const coCryptoAddrLabel = document.getElementById('coCryptoAddrLabel');
   const coCryptoQr = document.getElementById('coCryptoQr');
   const coCopyAddress = document.getElementById('coCopyAddress');
 
@@ -3879,8 +4013,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     let body = '';
     for(let i=0;i<34;i++) body += chars[Math.floor(Math.random()*chars.length)];
     if(coin === 'BTC') return 'bc1q' + body.slice(0,30);
-    if(coin === 'ETH') return '0x' + body.slice(0,40);
-    return 'Tt' + body.slice(0,32); // USDC-style
+    return '0x' + body.slice(0,40); // ETH / BNB Smart Chain both use EVM-style addresses
   }
 
   function renderQr(seedStr){
@@ -3898,6 +4031,107 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     coCryptoQr.innerHTML = cells;
   }
 
+  // ---- Wallet connect (MetaMask / EVM-compatible) — supports ETH and BNB Smart Chain only ----
+  const WALLET_CHAINS = {
+    ETH: { chainIdHex: '0x1', name: 'Ethereum' },
+    BNB: { chainIdHex: '0x38', name: 'BNB Smart Chain' }
+  };
+  const coWalletConnect = document.getElementById('coWalletConnect');
+  const coWalletDisconnected = document.getElementById('coWalletDisconnected');
+  const coWalletConnected = document.getElementById('coWalletConnected');
+  const coConnectWalletBtn = document.getElementById('coConnectWalletBtn');
+  const coDisconnectWalletBtn = document.getElementById('coDisconnectWalletBtn');
+  const coWalletAddress = document.getElementById('coWalletAddress');
+  const coWalletNetwork = document.getElementById('coWalletNetwork');
+  const coWalletNote = document.getElementById('coWalletNote');
+  let connectedWallet = null; // { address, chainIdHex }
+
+  function shortAddr(addr){
+    return addr.slice(0,6) + '…' + addr.slice(-4);
+  }
+
+  function getProvider(){
+    return (typeof window !== 'undefined' && window.ethereum) ? window.ethereum : null;
+  }
+
+  async function connectWallet(){
+    const provider = getProvider();
+    if(!provider){
+      alert('No wallet extension detected. Install MetaMask (or another EVM wallet) to pay with ETH or BNB directly.');
+      return;
+    }
+    try{
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      const chainIdHex = await provider.request({ method: 'eth_chainId' });
+      if(!accounts || !accounts[0]) return;
+      connectedWallet = { address: accounts[0], chainIdHex };
+      renderWalletState();
+    }catch(err){
+      if(err && err.code === 4001) return; // user rejected the connection
+      console.error('Wallet connection failed:', err);
+      alert('Could not connect to your wallet.');
+    }
+  }
+
+  async function ensureCorrectChain(coin){
+    const provider = getProvider();
+    const target = WALLET_CHAINS[coin];
+    if(!provider || !target || !connectedWallet) return;
+    if(connectedWallet.chainIdHex === target.chainIdHex) return;
+    try{
+      await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: target.chainIdHex }] });
+      connectedWallet.chainIdHex = target.chainIdHex;
+    }catch(err){
+      console.error('Chain switch failed or was rejected:', err);
+    }
+    renderWalletState();
+  }
+
+  function networkNameForChain(chainIdHex){
+    const entry = Object.values(WALLET_CHAINS).find(c => c.chainIdHex === chainIdHex);
+    return entry ? entry.name : 'Unsupported network';
+  }
+
+  function disconnectWallet(){
+    connectedWallet = null;
+    renderWalletState();
+  }
+
+  function renderWalletState(){
+    const coin = coCryptoCoin.value;
+    const supportsWallet = coin === 'ETH' || coin === 'BNB';
+
+    coWalletConnect.style.display = '';
+    coWalletNote.style.display = supportsWallet ? 'none' : 'block';
+    coWalletDisconnected.style.display = (!supportsWallet || connectedWallet) ? 'none' : 'flex';
+    coWalletConnected.style.display = (supportsWallet && connectedWallet) ? 'flex' : 'none';
+
+    if(supportsWallet && connectedWallet){
+      coWalletAddress.textContent = shortAddr(connectedWallet.address);
+      coWalletNetwork.textContent = networkNameForChain(connectedWallet.chainIdHex);
+    }
+
+    coCryptoAddrLabel.textContent = (supportsWallet && connectedWallet)
+      ? 'Merchant receiving address'
+      : 'Send exact amount to';
+
+    updatePayBtnLabel();
+  }
+
+  coConnectWalletBtn.addEventListener('click', connectWallet);
+  coDisconnectWalletBtn.addEventListener('click', disconnectWallet);
+  if(getProvider()){
+    getProvider().on && getProvider().on('accountsChanged', (accs) => {
+      if(!accs || !accs[0]){ disconnectWallet(); return; }
+      if(connectedWallet) connectedWallet.address = accs[0];
+      renderWalletState();
+    });
+    getProvider().on && getProvider().on('chainChanged', (chainIdHex) => {
+      if(connectedWallet) connectedWallet.chainIdHex = chainIdHex;
+      renderWalletState();
+    });
+  }
+
   function refreshCrypto(){
     const coin = coCryptoCoin.value;
     const total = getTotal();
@@ -3909,6 +4143,8 @@ document.querySelectorAll('.social-btn').forEach(btn => {
     coCryptoAddress.textContent = addr;
     coCryptoAddress.dataset.full = addr;
     renderQr(addr);
+    if(coin === 'ETH' || coin === 'BNB') ensureCorrectChain(coin);
+    renderWalletState();
   }
   coCryptoCoin.addEventListener('change', refreshCrypto);
   coCopyAddress.addEventListener('click', ()=>{
@@ -4055,6 +4291,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
   function processingLabelFor(method){
     if(method === 'card') return 'PROCESSING…';
     if(method === 'paypal') return 'CONNECTING TO PAYPAL…';
+    if(method === 'crypto' && connectedWallet) return 'WAITING FOR WALLET CONFIRMATION…';
     return 'CHECKING BLOCKCHAIN…';
   }
 
@@ -4566,6 +4803,8 @@ searchClose.addEventListener('click', () => {
       myReferralCredit = typeof cloudData.referralCredit === 'number' ? cloudData.referralCredit : 0;
       myReferredBy = cloudData.referredBy || null;
       myReferredCount = typeof cloudData.referredCount === 'number' ? cloudData.referredCount : 0;
+      // Refund credit (from returned/cancelled orders), tracked separately from referral credit
+      myRefundCredit = typeof cloudData.refundCredit === 'number' ? cloudData.refundCredit : 0;
       if(typeof renderCheckoutSummary === 'function' && checkoutModal.classList.contains('show')) renderCheckoutSummary();
 
       // Apply a custom profile picture saved on this account, if any
@@ -4883,6 +5122,7 @@ searchClose.addEventListener('click', () => {
       myReferralCredit = 0;
       myReferredBy = null;
       myReferredCount = 0;
+      myRefundCredit = 0;
       loadDataForGuest();
     }
   });
@@ -5515,6 +5755,57 @@ searchClose.addEventListener('click', () => {
       const original = referralCopyBtn.textContent;
       referralCopyBtn.textContent = 'COPIED!';
       setTimeout(() => referralCopyBtn.textContent = original, 1400);
+    });
+  })();
+
+  // ---- My Wallet modal (Refund credit + Referral credit, shown separately) ----
+  (function(){
+    const walletBtn = document.getElementById('walletBtn');
+    const walletModal = document.getElementById('walletModal');
+    const closeWalletModal = document.getElementById('closeWalletModal');
+    const walletLoggedOut = document.getElementById('walletLoggedOut');
+    const walletLoggedIn = document.getElementById('walletLoggedIn');
+    const walletLoginBtn = document.getElementById('walletLoginBtn');
+    const walletRefundAmount = document.getElementById('walletRefundAmount');
+    const walletReferralAmount = document.getElementById('walletReferralAmount');
+    const walletTotalAmount = document.getElementById('walletTotalAmount');
+
+    if(!walletBtn || !walletModal) return;
+
+    function renderWalletAmounts(){
+      walletRefundAmount.textContent = `$${myRefundCredit.toFixed(2)}`;
+      walletReferralAmount.textContent = `$${myReferralCredit.toFixed(2)}`;
+      walletTotalAmount.textContent = `$${(myRefundCredit + myReferralCredit).toFixed(2)}`;
+    }
+
+    function openWalletModal(){
+      const user = auth.currentUser;
+      if(user){
+        walletLoggedOut.style.display = 'none';
+        walletLoggedIn.style.display = 'block';
+        renderWalletAmounts();
+        // Pull the freshest numbers in case a refund or referral credited this account while the modal was closed
+        db.collection('users').doc(user.uid).get().then(doc => {
+          const data = doc.exists ? doc.data() : {};
+          myReferralCredit = typeof data.referralCredit === 'number' ? data.referralCredit : 0;
+          myRefundCredit = typeof data.refundCredit === 'number' ? data.refundCredit : 0;
+          renderWalletAmounts();
+        }).catch(() => renderWalletAmounts());
+      } else {
+        walletLoggedOut.style.display = 'block';
+        walletLoggedIn.style.display = 'none';
+      }
+      walletModal.classList.add('show');
+    }
+
+    walletBtn.addEventListener('click', openWalletModal);
+    closeWalletModal.addEventListener('click', () => walletModal.classList.remove('show'));
+    walletModal.addEventListener('click', (e) => {
+      if(e.target === walletModal) walletModal.classList.remove('show');
+    });
+    walletLoginBtn.addEventListener('click', () => {
+      walletModal.classList.remove('show');
+      requireAuth('Log in to view your refund and referral balances.');
     });
   })();
 
