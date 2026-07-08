@@ -223,12 +223,10 @@
     top:0;
     right:0;
     width:min(70vw, 900px);
-    aspect-ratio:1 / 1;
-    height:auto;
+    height:min(70vw, 900px);
     pointer-events:none;
     z-index:1;
     overflow:hidden;
-    border-radius:50%;
     mix-blend-mode:screen;
     opacity:0.55;
   }
@@ -284,8 +282,7 @@
   @media (max-width:768px){
     .sun-glow-overlay{
       width:100vw;
-      aspect-ratio:1 / 1;
-      height:auto;
+      height:60vw;
     }
   }
 
