@@ -4125,6 +4125,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
   const lightboxBadges = document.getElementById('lightboxBadges');
 
   grid.addEventListener('click', (e)=>{
+    if(e.target.closest('.wishlist-heart-btn')) return;
     const shot = e.target.closest('.product-shot');
     if(!shot) return;
     const img = shot.querySelector('img');
@@ -4570,6 +4571,7 @@ searchClose.addEventListener('click', () => {
       // Apply a custom profile picture saved on this account, if any
       if(cloudData.photoBase64){
         profileAvatar.innerHTML = `<img src="${cloudData.photoBase64}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+        if(window.refreshComposerIdentity) window.refreshComposerIdentity();
       }
 
       localStorage.removeItem(GUEST_DATA_KEY);
@@ -4989,6 +4991,7 @@ searchClose.addEventListener('click', () => {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
 
         profileAvatar.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+        if(window.refreshComposerIdentity) window.refreshComposerIdentity();
 
         db.collection('users').doc(user.uid).set({
           photoBase64: dataUrl,
@@ -5304,6 +5307,7 @@ searchClose.addEventListener('click', () => {
     }
     refreshComposerIdentity();
     auth.onAuthStateChanged(refreshComposerIdentity);
+    window.refreshComposerIdentity = refreshComposerIdentity;
 
     function resetComposer(){
       composerCaption.value = '';
