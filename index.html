@@ -2735,6 +2735,10 @@
 .search-suggestion-title{font-size:11.5px;color:#8a8a93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .search-suggestion-price{font-size:12.5px;font-weight:700;color:#0c0c0e;margin-left:auto;flex-shrink:0;padding-left:8px;}
 .search-no-results{padding:16px 12px;text-align:center;font-size:13px;color:#8a8a93;}
+.search-suggestions-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px;}
+.search-suggestions-header span{font-size:11px;font-weight:700;letter-spacing:0.6px;color:#8a8a93;}
+.search-clear-recent{background:none;border:none;font-size:11.5px;font-weight:600;color:#2fb6b0;cursor:pointer;padding:2px 4px;}
+.search-clear-recent:hover{text-decoration:underline;}
 
 
 </style>
@@ -4851,7 +4855,44 @@ const searchSuggestions=document.getElementById('searchSuggestions');
 searchBtn.addEventListener('click',()=>{
  searchOverlay.classList.add('show');
  searchInput.focus();
+ renderSuggestions();
 });
+
+const RECENT_SEARCH_KEY = 'solus_recent_searches';
+
+function getRecentSearches(){
+  try{
+    const stored = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY));
+    return Array.isArray(stored) ? stored.filter(idx => products[idx]) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function addRecentSearch(idx){
+  idx = Number(idx);
+  let recent = getRecentSearches().filter(i => i !== idx);
+  recent.unshift(idx);
+  recent = recent.slice(0, 5);
+  try{ localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(recent)); }catch(e){}
+}
+
+function clearRecentSearches(){
+  try{ localStorage.removeItem(RECENT_SEARCH_KEY); }catch(e){}
+}
+
+function suggestionItemHtml(p, idx){
+  return `
+    <div class="search-suggestion-item" data-idx="${idx}">
+      <img src="${p.image}" alt="${p.name}">
+      <div class="search-suggestion-info">
+        <span class="search-suggestion-name">${p.name}</span>
+        <span class="search-suggestion-title">${p.title}</span>
+      </div>
+      <span class="search-suggestion-price">$${p.price.toFixed(2)}</span>
+    </div>
+  `;
+}
 
 function closeSearch(){
   searchOverlay.classList.remove('show');
@@ -4861,6 +4902,8 @@ function closeSearch(){
 }
 
 function goToProduct(idx){
+  idx = Number(idx);
+  addRecentSearch(idx);
   const card = grid.children[idx];
   closeSearch();
   if(card){
@@ -4870,11 +4913,28 @@ function goToProduct(idx){
   }
 }
 
+function renderRecentSearches(){
+  const recentIdxs = getRecentSearches();
+  if(recentIdxs.length === 0){
+    searchSuggestions.innerHTML = '<div class="search-no-results">Start typing to search products</div>';
+    searchSuggestions.classList.add('show');
+    return;
+  }
+  const itemsHtml = recentIdxs.map(idx => suggestionItemHtml(products[idx], idx)).join('');
+  searchSuggestions.innerHTML = `
+    <div class="search-suggestions-header">
+      <span>RECENT SEARCHES</span>
+      <button type="button" id="clearRecentBtn" class="search-clear-recent">Clear</button>
+    </div>
+    ${itemsHtml}
+  `;
+  searchSuggestions.classList.add('show');
+}
+
 function renderSuggestions(){
   const q = searchInput.value.toLowerCase().trim();
   if(q===''){
-    searchSuggestions.classList.remove('show');
-    searchSuggestions.innerHTML = '';
+    renderRecentSearches();
     return;
   }
 
@@ -4894,16 +4954,7 @@ function renderSuggestions(){
     return;
   }
 
-  searchSuggestions.innerHTML = matches.map(({p, idx}) => `
-    <div class="search-suggestion-item" data-idx="${idx}">
-      <img src="${p.image}" alt="${p.name}">
-      <div class="search-suggestion-info">
-        <span class="search-suggestion-name">${p.name}</span>
-        <span class="search-suggestion-title">${p.title}</span>
-      </div>
-      <span class="search-suggestion-price">$${p.price.toFixed(2)}</span>
-    </div>
-  `).join('');
+  searchSuggestions.innerHTML = matches.map(({p, idx}) => suggestionItemHtml(p, idx)).join('');
   searchSuggestions.classList.add('show');
 }
 
@@ -4917,6 +4968,11 @@ searchInput.addEventListener('keydown', (e) => {
 });
 
 searchSuggestions.addEventListener('click', (e) => {
+  if(e.target.closest('#clearRecentBtn')){
+    clearRecentSearches();
+    renderRecentSearches();
+    return;
+  }
   const item = e.target.closest('.search-suggestion-item');
   if(!item) return;
   goToProduct(item.dataset.idx);
