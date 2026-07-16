@@ -15,9 +15,9 @@
     --purple:#8b85e8;
     --purple-dark:#6f68d9;
     --purple-light:#b9b3f5;
-    --ink:#0c0c0e;
-    --paper:#f4f4f6;
-    --paper-2:#ffffff;
+    --ink:#f4f4f6;
+    --paper:var(--black);
+    --paper-2:var(--near-black);
     --muted:#8a8a93;
     --line:rgba(255,255,255,0.12);
     --line-dark:rgba(0,0,0,0.08);
@@ -94,7 +94,7 @@
 
   /* ---------- NAV ---------- */
   header{
-    background:var(--black);
+    background:#ffffff;
     position:sticky;
     top:0;
     z-index:100;
@@ -112,7 +112,7 @@
     display:flex;
     flex-direction:row;
     align-items:center;
-    color:#fff;
+    color:#0c0c0e;
     line-height:1;
     gap:12px;
     flex-shrink:0;
@@ -123,7 +123,7 @@
     width:18px;height:18px;
     opacity:0.95;
     object-fit:contain;
-    filter:brightness(0) invert(1);
+    filter:brightness(0);
   }
   .nav .logo .crown{
     width:46px;height:46px;
@@ -153,16 +153,16 @@
     flex-shrink:0;
   }
   .nav-links a{
-    color:#fff;
+    color:#0c0c0e;
     font-size:13px;
     font-weight:600;
     letter-spacing:1px;
     position:relative;
     padding-bottom:22px;
   }
-  .nav-links a.active{color:#fff;}
+  .nav-links a.active{color:#0c0c0e;}
   .nav-links a{
-  color:#fff;
+  color:#0c0c0e;
   font-size:13px;
   font-weight:600;
   letter-spacing:1px;
@@ -198,7 +198,7 @@
   }
   .nav-icons button{
     background:none;
-    color:#fff;
+    color:#0c0c0e;
     display:flex;
     align-items:center;
     position:relative;
@@ -207,7 +207,7 @@
     transition:background .18s ease;
   }
   .nav-icons button:hover{
-    background:rgba(255,255,255,0.1);
+    background:rgba(0,0,0,0.06);
   }
   .nav-icons button:focus{
     outline:none;
@@ -485,8 +485,8 @@
     display:flex;
     align-items:center;
     gap:2px;
-    background:rgba(255,255,255,0.06);
-    border:1px solid var(--line);
+    background:rgba(0,0,0,0.05);
+    border:1px solid var(--line-dark);
     border-radius:999px;
     padding:3px;
     margin-right:6px;
@@ -499,11 +499,11 @@
     align-items:center;
     justify-content:center;
     background:transparent;
-    color:rgba(255,255,255,0.55);
+    color:rgba(12,12,14,0.55);
     transition:background .25s ease, color .25s ease;
   }
   .theme-btn:hover{
-    color:#fff;
+    color:#0c0c0e;
   }
   .theme-btn.active{
     background:var(--purple);
@@ -512,8 +512,8 @@
   .cart-count{
     position:absolute;
     top:-8px;right:-10px;
-    background:#fff;
-    color:#000;
+    background:#0c0c0e;
+    color:#fff;
     font-size:10px;
     font-weight:700;
     width:16px;height:16px;
