@@ -1218,6 +1218,12 @@
     .product-shot::before{ animation:none; opacity:.8; }
   }
   .product-shot img{height:100%; width:auto; max-width:100%; object-fit:contain; position:relative; z-index:1;}
+  .product-shot img.zoomed-shot{transform:scale(1.6);}
+  .product-shot:hover img.zoomed-shot{animation:tumblerBobZoomed 1.1s ease-in-out infinite;}
+  @keyframes tumblerBobZoomed{
+    0%,100%{ transform:scale(1.6) translateY(0); }
+    50%{ transform:scale(1.6) translateY(-10px); }
+  }
   .product-shot:hover img{
     animation:tumblerBob 1.1s ease-in-out infinite;
   }
@@ -3851,6 +3857,9 @@ document.querySelectorAll('.social-btn').forEach(btn => {
 {name:"Mint Fresh",      title:"The Aero Lightweight Bottle | 22 OZ", price:34.99, image:"mint.fresh.png", badges:["New"]},
 {name:"Sky Blue",        title:"The Daybreak Quencher | 40 OZ", price:34.99, image:"sky.blue.png", badges:["New Colours"]},
 {name:"Bronze Steel",    title:"The Summit Steel Tumbler | 30 OZ", price:38.99, image:"bronze.steel.png", badges:["Bestseller"]},
+    // ===== NEW BAGS =====
+  {name:"Classic White",   title:"The Voyager Everyday Backpack | 22L", price:59.99, image:"bag1.png", badges:["New"]},
+  {name:"Blush Pink",      title:"The Wanderer Mini Backpack | 15L", price:54.99, image:"bag2.png", badges:["New"]},
   ];
 
   // ---- Product grid ----
@@ -3864,7 +3873,7 @@ document.querySelectorAll('.social-btn').forEach(btn => {
 
     card.innerHTML = `
       <div class="product-shot">
-        <img src="${p.image}" alt="${p.title}">
+        <img src="${p.image}" alt="${p.title}" class="${p.image==='bag1.png'||p.image==='bag2.png' ? 'zoomed-shot' : ''}">
         <button class="wishlist-heart-btn" data-idx="${idx}" aria-label="Save for later" title="Save for later">
           <svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
         </button>
